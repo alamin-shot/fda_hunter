@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 
 const axiosClient: AxiosInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API || "https://empire.apphero.agency/api",
+  baseURL: process.env.NEXT_PUBLIC_API || "",
   headers: {
     "Content-Type": "application/json",
     "Accept": "application/json",
