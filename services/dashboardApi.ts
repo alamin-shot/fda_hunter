@@ -374,12 +374,12 @@ export const dashboardApi = {
     return response.data;
   },
 
-  updateProfile: async (
-    data: Partial<ProfileData>,
-  ): Promise<ApiResponse<ProfileData>> => {
+  updateProfile: async (data: any): Promise<ApiResponse<ProfileData>> => {
+    const isFormData = data instanceof FormData;
     const response = await axiosClient.put<ApiResponse<ProfileData>>(
       "/admin/settings/profile",
       data,
+      isFormData ? { headers: { "Content-Type": "multipart/form-data" } } : {}
     );
     return response.data;
   },

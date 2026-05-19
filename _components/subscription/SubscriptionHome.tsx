@@ -410,58 +410,47 @@ export default function SubscriptionHome() {
       const features = plan.features || [];
 
       return (
-        <div>
-          <div className="p-4 border border-[#2B303B] mt-6 flex items-center justify-between rounded-t-lg">
+        <div className="border border-[#2B303B] mt-6 rounded-lg overflow-hidden">
+          <div className="p-4 flex items-center justify-between bg-[#181B25]">
             <div>
-              <h3 className="text-white text-base font-semibold">
-                {plan.name}
-              </h3>
-              <p className="text-[#A5A5AB] text-sm font-medium mt-1">
-                {plan.description}
-              </p>
+              <h3 className="text-white text-base font-semibold">{plan.name}</h3>
+              <p className="text-[#A5A5AB] text-sm font-medium mt-1">{plan.description}</p>
             </div>
             <div className="flex items-center gap-2">
               <button className="cursor-pointer hover:bg-white/10 p-1 rounded" onClick={() => handleOpenEdit(plan)}>
                 <DocumentsIcon />
               </button>
-              <button
-                className="cursor-pointer hover:bg-white/10 p-1 rounded"
-                onClick={() => handleDeletePlan(plan.id, plan.name)}
-              >
+              <button className="cursor-pointer hover:bg-white/10 p-1 rounded" onClick={() => handleDeletePlan(plan.id, plan.name)}>
                 <RedTrashIcon />
               </button>
             </div>
           </div>
-          <div className="border-x border-b border-[#2B303B] pt-6 px-4 pb-4 rounded-b-lg flex items-center gap-6">
-            <div className="flex-3 text-white">
-              <h2 className="text-white text-[32px] font-semibold">
+          <div className="p-6 bg-[#0E121B] flex items-center gap-6">
+            <div className="text-white">
+              <h2 className="text-[32px] font-semibold">
                 ${plan.price}
-                <span className="text-sm text-[#A5A5AB] font-medium ml-1">
-                  /{formatDurationDisplay(plan.billing_period)}
-                </span>
+                <span className="text-sm text-[#A5A5AB] font-medium ml-1">/{formatDurationDisplay(plan.billing_period)}</span>
               </h2>
+              <div className="flex items-center gap-4 mt-2">
+                <span className={`text-xs px-2 py-1 rounded ${plan.is_active ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400"}`}>
+                  {plan.is_active ? "Active" : "Inactive"}
+                </span>
+                <span className="text-xs text-[#A5A5AB]">USD</span>
+              </div>
             </div>
-            <ul className="flex-2 space-y-1">
+            <ul className="space-y-1">
               {features.slice(0, 3).map((feature, index) => (
                 <li key={index} className="flex items-center gap-2">
-                  <div className="flex-shrink-0">
-                    <TikMark />
-                  </div>
-                  <p className="text-sm text-[#A5A5AB] font-medium">
-                    {feature}
-                  </p>
+                  <div className="flex-shrink-0"><TikMark /></div>
+                  <p className="text-sm text-[#A5A5AB] font-medium">{feature}</p>
                 </li>
               ))}
             </ul>
-            <ul className="flex-2 space-y-1">
+            <ul className="space-y-1">
               {features.slice(3, 6).map((feature, index) => (
                 <li key={index} className="flex items-center gap-2">
-                  <div className="flex-shrink-0">
-                    <TikMark />
-                  </div>
-                  <p className="text-sm text-[#A5A5AB] font-medium">
-                    {feature}
-                  </p>
+                  <div className="flex-shrink-0"><TikMark /></div>
+                  <p className="text-sm text-[#A5A5AB] font-medium">{feature}</p>
                 </li>
               ))}
             </ul>
@@ -483,7 +472,7 @@ export default function SubscriptionHome() {
           return (
             <div
               key={plan.id}
-              className="border border-[#2B303B] rounded-lg overflow-hidden hover:border-[#00F474]/30 transition-colors duration-200"
+              className="border border-[#2B303B] rounded-lg overflow-hidden hover:border-[#00F474]/30 transition-colors duration-200 flex flex-col"
             >
               <div className="p-4 bg-[#181B25] border-b border-[#2B303B]">
                 <div className="flex items-start justify-between mb-2">
@@ -496,58 +485,52 @@ export default function SubscriptionHome() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button className="cursor-pointer hover:bg-white/10 p-1 rounded">
+                    <button className="cursor-pointer hover:bg-white/10 p-1 rounded" onClick={() => handleOpenEdit(plan)}>
                       <DocumentsIcon />
                     </button>
-                    <button className="cursor-pointer hover:bg-white/10 p-1 rounded">
+                    <button className="cursor-pointer hover:bg-white/10 p-1 rounded" onClick={() => handleDeletePlan(plan.id, plan.name)}>
                       <RedTrashIcon />
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 bg-[#0E121B]">
+              <div className="p-4 bg-[#0E121B] flex flex-col h-full">
                 <div className="mb-4">
-                  <h2 className="text-white text-2xl md:text-[28px] font-semibold">
-                    ${plan.price}
-                    <span className="text-sm text-[#A5A5AB] font-medium ml-1">
-                      /{formatDurationDisplay(plan.billing_period)}
-                    </span>
-                  </h2>
+                  <div className="mb-4">
+                    <h2 className="text-white text-2xl md:text-[28px] font-semibold">
+                      ${plan.price}
+                      <span className="text-sm text-[#A5A5AB] font-medium ml-1">
+                        /{formatDurationDisplay(plan.billing_period)}
+                      </span>
+                    </h2>
+                  </div>
+                  <div className="flex justify-between">
+                    <div className="space-y-2">
+                      {features.length > 0 ? (
+                        features.map((feature, index) => (
+                          <div key={index} className="flex items-start gap-2">
+                            <div className="mt-1 flex-shrink-0"><TikMark /></div>
+                            <p className="text-sm text-[#A5A5AB] font-medium flex-1">{feature}</p>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-[#717784] italic">No features specified</p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center  gap-2">
+                      <span className={`text-xs px-2 py-1 rounded ${plan.is_active ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400"}`}>
+                        {plan.is_active ? "Active" : "Inactive"}
+                      </span>
+                      <span className="text-xs text-[#A5A5AB]">USD</span>
+                    </div>
+                  </div>
+
                 </div>
 
-                <div className="space-y-2">
-                  {features.length > 0 ? (
-                    features.map((feature, index) => (
-                      <div key={index} className="flex items-start gap-2">
-                        <div className="mt-1 flex-shrink-0">
-                          <TikMark />
-                        </div>
-                        <p className="text-sm text-[#A5A5AB] font-medium flex-1">
-                          {feature}
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-[#717784] italic">
-                      No features specified
-                    </p>
-                  )}
-                </div>
-
-                <div className="mt-4 flex items-center justify-between">
-                  <span
-                    className={`text-xs px-2 py-1 rounded ${plan.is_active ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400"}`}
-                  >
-                    {plan.is_active ? "Active" : "Inactive"}
-                  </span>
-                  <span className="text-xs text-[#A5A5AB]">
-                    USD
-                  </span>
-                </div>
-
-                <button className="w-full mt-4 py-2.5 bg-[#00F474] text-[#1D1F2C] font-semibold rounded-lg hover:bg-[#00F474]/90 transition-colors active:scale-[0.98]">
-                  {plan.is_active ? "Select Plan" : "Inactive"}
+                <button className="w-full mt-auto pt-4 py-2.5 bg-[#00F474] text-[#1D1F2C] font-semibold rounded-lg hover:bg-[#00F474]/90 transition-colors active:scale-[0.98]">
+                  Select Plan
                 </button>
               </div>
             </div>

@@ -20,19 +20,19 @@ export default function TotalWinRateGauge({ data, overallWinRate }: Props) {
                 Total Win rate
             </h2>
 
-            <div className="relative mx-auto h-[260px] w-full max-w-[420px]">
+            <div className="relative mx-auto h-[260px] w-full max-w-[520px]">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                         <Pie
                             data={data}
                             dataKey="value"
-                            startAngle={180}
+                            startAngle={200}
                             endAngle={0}
                             innerRadius={90}
                             outerRadius={115}
-                            paddingAngle={5}
+                            paddingAngle={3}
                             stroke="none"
-                            cornerRadius={12}
+                            cornerRadius={8}
                         >
                             {data.map((entry, index) => (
                                 <Cell
@@ -44,16 +44,16 @@ export default function TotalWinRateGauge({ data, overallWinRate }: Props) {
                     </PieChart>
                 </ResponsiveContainer>
 
-                <div className="absolute left-1/2 top-[58%] -translate-x-1/2 -translate-y-1/2 text-center">
+                <div className="absolute left-1/2 top-[48%] -translate-x-1/2 -translate-y-1/2 text-center">
                     <p className="text-lg text-[#98A2B3]">
                         Overall Win rate
                     </p>
 
-                    <h3 className="mt-1 text-5xl font-bold">{overallWinRate.toFixed(0)}%</h3>
+                    <h3 className="mt-1 text-2xl font-bold">{overallWinRate.toFixed(0)}%</h3>
                 </div>
             </div>
 
-            <div className="mt-2 grid grid-cols-2 gap-y-4">
+            <div className=" grid grid-cols-1 gap-y-4">
                 {data.map((item) => (
                     <div
                         key={item.name}
