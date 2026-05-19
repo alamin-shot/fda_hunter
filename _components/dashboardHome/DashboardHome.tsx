@@ -281,21 +281,25 @@ export default function DashboardHome() {
       </div>
 
       {/* Charts Row */}
-      <div className="mt-4.5 grid grid-cols-1 lg:grid-cols-2 gap-4.5">
+      <div className="mt-4.5 flex flex-col lg:flex-row gap-4.5 items-stretch">
         {allPredictions.length > 0 ? (
           <>
-            <ConfidenceVsOutcomeChart data={barChartData} />
-            <TotalWinRateGauge data={gaugeData} overallWinRate={overallWinRate} />
+            <div className="w-full lg:w-[70%] flex flex-col">
+              <ConfidenceVsOutcomeChart data={barChartData} />
+            </div>
+            <div className="w-full lg:w-[30%] flex flex-col">
+              <TotalWinRateGauge data={gaugeData} overallWinRate={overallWinRate} />
+            </div>
           </>
         ) : (
           <>
-            <div className="rounded-3xl bg-[#050B1A] p-6 text-white flex items-center justify-center h-[400px]">
+            <div className="w-full lg:w-[70%] h-full rounded-3xl bg-[#050B1A] p-6 text-white flex items-center justify-center min-h-[400px]">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white mx-auto mb-3"></div>
                 <p className="text-gray-400">Loading chart data...</p>
               </div>
             </div>
-            <div className="rounded-3xl bg-[#050B1A] p-6 text-white flex items-center justify-center h-[400px]">
+            <div className="w-full lg:w-[30%] h-full rounded-3xl bg-[#050B1A] p-6 text-white flex items-center justify-center min-h-[400px]">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white mx-auto mb-3"></div>
                 <p className="text-gray-400">Loading chart data...</p>

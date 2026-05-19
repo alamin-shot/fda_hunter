@@ -45,7 +45,7 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 export default function ConfidenceVsOutcomeChart({ data }: Props) {
     return (
-        <div className="rounded-3xl bg-[#050B1A] p-6 text-white">
+        <div className="rounded-3xl bg-[#050B1A] p-6 text-white w-full flex-1 flex flex-col">
             <div className="mb-8 flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-semibold">
@@ -70,7 +70,7 @@ export default function ConfidenceVsOutcomeChart({ data }: Props) {
                 </button>
             </div>
 
-            <div className="h-[320px]">
+            <div className="flex-1 min-h-[320px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                         data={data}

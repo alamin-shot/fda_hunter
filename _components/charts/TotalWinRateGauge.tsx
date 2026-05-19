@@ -15,7 +15,7 @@ interface Props {
 }
 export default function TotalWinRateGauge({ data, overallWinRate }: Props) {
     return (
-        <div className="rounded-3xl bg-[#050B1A] p-6 text-white">
+        <div className="rounded-3xl bg-[#050B1A] p-6 text-white w-full flex-1 flex flex-col">
             <h2 className="mb-6 text-2xl font-semibold">
                 Total Win rate
             </h2>
