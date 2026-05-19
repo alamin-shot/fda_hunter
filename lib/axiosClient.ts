@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 
 const axiosClient: AxiosInstance = axios.create({
-  baseURL: "https://empire.apphero.agency/api",
+  baseURL: process.env.NEXT_PUBLIC_API || "https://empire.apphero.agency/api",
   headers: {
     "Content-Type": "application/json",
     "Accept": "application/json",
@@ -32,13 +32,13 @@ axiosClient.interceptors.response.use(
 
     // Prevent infinite loop if the refresh endpoint itself returns 401
     if (originalRequest.url?.includes("/admin/refresh")) {
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("access_token");
-          if (window.location.pathname !== "/") {
-            window.location.href = "/";
-          }
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("access_token");
+        if (window.location.pathname !== "/") {
+          window.location.href = "/";
         }
-        return Promise.reject(error);
+      }
+      return Promise.reject(error);
     }
 
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -46,7 +46,7 @@ axiosClient.interceptors.response.use(
       try {
         const refreshResponse = await axiosClient.post("/admin/refresh");
         if (refreshResponse.data?.data?.access_token) {
-           localStorage.setItem("access_token", refreshResponse.data.data.access_token);
+          localStorage.setItem("access_token", refreshResponse.data.data.access_token);
         }
         return axiosClient(originalRequest);
       } catch (refreshError) {
