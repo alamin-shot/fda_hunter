@@ -6,112 +6,113 @@ export interface LoginRequest {
   password: string;
 }
 
-export interface Authorization {
-  type: string;
-  token: string;
-  refresh_token: string;
+export interface UserData {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  avatar: string | null;
+  date_of_birth?: string | null;
+  location?: string | null;
+  gender?: string | null;
+  is_premium?: boolean;
+  onboarding_completed?: boolean;
+  subscription?: {
+    type: string;
+    trial_ends_at: string | null;
+    ends_at: string | null;
+  };
+  created_at?: string;
 }
 
 export interface LoginResponse {
-  success: boolean;
-  message: string | { message: string; error: string; statusCode: number };
-  data?: {
-    id: string;
-    name: string;
-    email: string;
-    gender: string | null;
-    date_of_birth: string | null;
-    avatar_url: string | null;
-    catagoary: string | null;
-    type: "admin" | "user";
-    isSubscriber: boolean;
-    realSubscriber: boolean;
-    createdAt: string;
-    updatedAt: string;
-    avatar: string | null;
+  status: boolean;
+  message: string;
+  data: {
+    access_token: string;
+    token_type: string;
+    expires_in: number;
+    user: UserData;
   };
-  token?: string;  // Token is at root level, not inside authorization
-  categoryIncluded?: boolean;
-  type?: "admin" | "user";  // User type is in data.type, but keep this if needed
 }
 
-// ============ ONLY LOGIN FUNCTION ============
+export interface LogoutResponse {
+  status: boolean;
+  message: string;
+  data: null;
+}
+
+export interface RefreshResponse {
+  status: boolean;
+  message: string;
+  data: {
+    access_token: string;
+    token_type: string;
+    expires_in: number;
+  };
+}
+
+// ============ AUTH API ============
 const authApi = {
-  // Login - Handle nested error response
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
     try {
-      const response = await axiosClient.post<LoginResponse>("/api/auth/login", credentials);
-      
-      // Store tokens in localStorage if success
-      if (typeof window !== "undefined" && response.data.success && response.data.token) {
-        localStorage.setItem("token", response.data.token);
-        // Store refresh_token if available (check response structure)
-        localStorage.setItem("user_type", response.data.data?.type || "user");
-        localStorage.setItem("user_email", credentials.email);
-        localStorage.setItem("user_id", response.data.data?.id || "");
-        localStorage.setItem("user_name", response.data.data?.name || "");
-      }
-      
+      const response = await axiosClient.post<LoginResponse>(
+        "/admin/login",
+        credentials,
+      );
       return response.data;
     } catch (error: any) {
-      console.log("Raw API Error:", error);
-      
-      // FIXED: Handle nested error message structure
       let errorMessage = "Login failed. Please try again.";
-      
-      // Case 1: API returns nested error message (your case)
-      if (error.response?.data?.message?.message) {
-        errorMessage = error.response.data.message.message;
-      }
-      // Case 2: API returns simple error message
-      else if (error.response?.data?.message) {
+
+      if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors) {
+        // Laravel validation errors
+        const errors = error.response.data.errors;
+        errorMessage = Object.values(errors).flat().join(", ");
       }
-      // Case 3: API returns error in different field
-      else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      }
-      // Case 4: Axios error with message
-      else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      // Create a proper error response object
-      const errorResponse: LoginResponse = {
-        success: false,
-        message: errorMessage
-      };
-      
-      throw errorResponse;
+
+      throw {
+        status: false,
+        message: errorMessage,
+        data: null,
+      } as any;
     }
   },
 
-  // Check if user is authenticated
-  isAuthenticated: (): boolean => {
-    if (typeof window === "undefined") return false;
-    return !!localStorage.getItem("token");
+  logout: async (): Promise<LogoutResponse> => {
+    try {
+      const response = await axiosClient.post<LogoutResponse>("/admin/logout");
+      return response.data;
+    } catch (error: any) {
+      throw {
+        status: false,
+        message: error.response?.data?.message || "Logout failed",
+        data: null,
+      } as any;
+    }
   },
 
-  // Get user type
-  getUserType: (): string | null => {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem("user_type");
+  refreshToken: async (): Promise<RefreshResponse> => {
+    try {
+      const response =
+        await axiosClient.post<RefreshResponse>("/admin/refresh");
+      return response.data;
+    } catch (error: any) {
+      throw {
+        status: false,
+        message: "Token refresh failed",
+        data: null,
+      } as any;
+    }
   },
 
-  // Get user email
-  getUserEmail: (): string | null => {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem("user_email");
-  },
-
-  // Clear all auth data
-  clearAuth: (): void => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user_type");
-      localStorage.removeItem("user_email");
-      localStorage.removeItem("user_id");
-      localStorage.removeItem("user_name");
+  isAuthenticated: async (): Promise<boolean> => {
+    try {
+      await axiosClient.get("/admin/users/overview");
+      return true;
+    } catch {
+      return false;
     }
   },
 };

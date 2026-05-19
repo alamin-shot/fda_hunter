@@ -14,10 +14,11 @@ import TikMark from "../icons/subscription/TikMark";
 import { Switch } from "@/components/ui/switch";
 import CustomDropdown from "../reusable/CustomDropdown";
 
-import { 
-  dashboardApi, 
-  SubscriptionPackage, 
-  PromoCode 
+import {
+  dashboardApi,
+  SubscriptionPlan,
+  SubscriptionOverview,
+  PromoCode,
 } from "@/services/dashboardApi";
 
 interface StatCardProps {
@@ -34,15 +35,18 @@ export default function SubscriptionHome() {
   const [loading, setLoading] = useState(false);
   const [loadingPackages, setLoadingPackages] = useState(false);
   const [loadingPromoCodes, setLoadingPromoCodes] = useState(false);
-  const [subscriptionPackages, setSubscriptionPackages] = useState<SubscriptionPackage[]>([]);
+  const [overview, setOverview] = useState<SubscriptionOverview | null>(null);
+  const [subscriptionPlans, setSubscriptionPlans] = useState<
+    SubscriptionPlan[]
+  >([]);
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
-  
+
   // Form states
   const [planName, setPlanName] = useState("");
   const [planTitle, setPlanTitle] = useState("");
   const [planAmount, setPlanAmount] = useState("");
   const [planDescription, setPlanDescription] = useState("");
-  
+
   // Promo code form states
   const [promoCode, setPromoCode] = useState("");
   const [promoDiscount, setPromoDiscount] = useState("");
@@ -50,23 +54,43 @@ export default function SubscriptionHome() {
   const [promoExpiryDate, setPromoExpiryDate] = useState("");
   const [creatingPromoCode, setCreatingPromoCode] = useState(false);
 
+  const [editPlanId, setEditPlanId] = useState<number | null>(null);
+  const [editPlanName, setEditPlanName] = useState("");
+  const [editPlanPrice, setEditPlanPrice] = useState("");
+  const [editPlanFeatures, setEditPlanFeatures] = useState("");
+  const [editPlanPeriod, setEditPlanPeriod] = useState("");
+  const [editModalOpen, setEditModalOpen] = useState(false);
+
   // Fetch subscription packages and promo codes on component mount
   useEffect(() => {
     fetchSubscriptionPackages();
     fetchPromoCodes();
   }, []);
+  useEffect(() => {
+    const fetchOverview = async () => {
+      try {
+        const response = await dashboardApi.getSubscriptionOverview();
+        if (response.status) {
+          setOverview(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching subscription overview:", error);
+      }
+    };
+    fetchOverview();
+  }, []);
 
   const fetchSubscriptionPackages = async () => {
     setLoadingPackages(true);
     try {
-      const response = await dashboardApi.getSubscriptionPackage();
-      if (response.success && response.data) {
-        setSubscriptionPackages([response.data]);
+      const response = await dashboardApi.getSubscriptionPlans();
+      if (response.status && response.data) {
+        setSubscriptionPlans(response.data);
       }
     } catch (error: any) {
-      console.error("Error fetching subscription packages:", error);
-      toast.error(error.message || "Failed to load subscription packages");
-      setSubscriptionPackages([]);
+      console.error("Error fetching subscription plans:", error);
+      toast.error(error.message || "Failed to load subscription plans");
+      setSubscriptionPlans([]);
     } finally {
       setLoadingPackages(false);
     }
@@ -76,7 +100,7 @@ export default function SubscriptionHome() {
     setLoadingPromoCodes(true);
     try {
       const response = await dashboardApi.getPromoCodes();
-      if (response.success && response.data) {
+      if (response.status && response.data) {
         setPromoCodes(response.data);
       }
     } catch (error: any) {
@@ -88,23 +112,15 @@ export default function SubscriptionHome() {
     }
   };
 
-  // Helper function to split description into features array
-  const getFeaturesFromDescription = (description: string[] | string): string[] => {
-    if (Array.isArray(description)) {
-      return description.join(', ').split(',').map(feature => feature.trim()).filter(feature => feature);
-    } else if (typeof description === 'string') {
-      return description.split(',').map(feature => feature.trim()).filter(feature => feature);
-    }
-    return [];
-  };
+
 
   // Helper function to format duration display
   const formatDurationDisplay = (duration: string): string => {
     if (!duration || duration === "0") return "lifetime";
-    
+
     const days = parseInt(duration);
     if (isNaN(days)) return duration;
-    
+
     if (days === 30) return "month";
     if (days === 60) return "2 months";
     if (days === 90) return "3 months";
@@ -116,49 +132,97 @@ export default function SubscriptionHome() {
   // Helper function to format date
   const formatDate = (dateString: string | null): string => {
     if (!dateString) return "Never";
-    
+
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
   };
 
   // Copy promo code to clipboard
   const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text)
+    navigator.clipboard
+      .writeText(text)
       .then(() => {
         toast.success("Promo code copied to clipboard!");
       })
-      .catch(err => {
+      .catch((err) => {
         console.error("Failed to copy: ", err);
         toast.error("Failed to copy promo code");
       });
   };
 
   // Helper function to handle switch toggle
-  const handlePromoCodeToggle = async (id: string, isActive: boolean) => {
+  const handlePromoCodeToggle = async (id: number, isActive: boolean) => {
     try {
       // Note: You may need to create an update endpoint for promo codes
       // For now, we'll just log it
       console.log(`Toggle promo code ${id} to ${!isActive}`);
-      toast.success(`Promo code ${isActive ? 'deactivated' : 'activated'}`);
+      toast.success(`Promo code ${isActive ? "deactivated" : "activated"}`);
     } catch (error) {
       console.error("Error toggling promo code:", error);
       toast.error("Failed to update promo code status");
     }
   };
+  const handleOpenEdit = (plan: SubscriptionPlan) => {
+    setEditPlanId(plan.id);
+    setEditPlanName(plan.name);
+    setEditPlanPrice(plan.price);
+    setEditPlanFeatures(plan.features.join(", "));
+    setEditPlanPeriod(plan.billing_period);
+    setEditModalOpen(true);
+
+  };
+
+  const handleUpdatePlan = async () => {
+    if (!editPlanName.trim()) return toast.error("Name is required");
+    if (!editPlanPrice.trim()) return toast.error("Price is required");
+
+    setLoading(true);
+    try {
+      const response = await dashboardApi.updatePlan(editPlanId!, {
+        name: editPlanName.trim(),
+        price: String(editPlanPrice),
+        billing_period: editPlanPeriod,
+        features: editPlanFeatures.split(",").map(f => f.trim()).filter(Boolean),
+      });
+      if (response.status) {
+        toast.success("Plan updated!");
+        fetchSubscriptionPackages();
+        setEditModalOpen(false);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to update plan");
+    } finally {
+      setLoading(false);
+    }
+  };
+  const handleDeletePlan = async (id: number, name: string) => {
+    if (!confirm(`Delete plan "${name}"?`)) return;
+    try {
+      const response = await dashboardApi.deletePlan(id);
+      if (response.status) {
+        toast.success("Plan deleted!");
+        fetchSubscriptionPackages();
+      } else {
+        toast.error(response.message || "Failed to delete plan");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete plan");
+    }
+  };
 
   // Handle delete promo code
-  const handleDeletePromoCode = async (id: string, code: string) => {
+  const handleDeletePromoCode = async (id: number, code: string) => {
     if (!confirm(`Are you sure you want to delete promo code "${code}"?`)) {
       return;
     }
 
     try {
       const response = await dashboardApi.deletePromoCode(id);
-      if (response.success) {
+      if (response.status) {
         toast.success("Promo code deleted successfully!");
         // Refresh the promo codes list
         await fetchPromoCodes();
@@ -172,40 +236,25 @@ export default function SubscriptionHome() {
   };
 
   const durationOptions = [
-    { value: "30", label: "30 days" },
-    { value: "60", label: "60 days" },
-    { value: "90", label: "90 days" },
-    { value: "180", label: "180 days" },
-    { value: "365", label: "1 year" },
-    { value: "lifetime", label: "Lifetime" },
+    { value: "monthly", label: "Monthly" },
+    { value: "yearly", label: "Yearly" },
+    { value: "half_yearly", label: "Half Yearly" },
   ];
 
-  const statCardsData: StatCardProps[] = [
-    {
-      title: "Total Subscribers",
-      value: "2,477",
-      period: "vs last month",
-      icon: <SubscribersIcon />,
-    },
-    {
-      title: "Monthly Revenue",
-      value: "$63,046",
-      period: "vs last month",
-      icon: <MonthlyRevIcon />,
-    },
-    {
-      title: "Avg. Revenue per User",
-      value: "64",
-      period: "vs last month",
-      icon: <RevPerUserIcon />,
-    },
-    {
-      title: "Churn Rate",
-      value: "54%",
-      period: "vs last month",
-      icon: <ChurnIcon />,
-    },
-  ];
+
+  const statCardsData: StatCardProps[] = overview
+    ? [
+      { title: "Total Subscribers", value: overview.total_subscribers, period: "all time", icon: <SubscribersIcon /> },
+      { title: "Monthly Revenue", value: `$${overview.monthly_revenue}`, period: "this month", icon: <MonthlyRevIcon /> },
+      { title: "Avg. Revenue per User", value: `$${overview.avg_revenue_per_user}`, period: "average", icon: <RevPerUserIcon /> },
+      { title: "Churn Rate", value: `${overview.churn_rate}%`, period: "current", icon: <ChurnIcon /> },
+    ]
+    : [
+      { title: "Total Subscribers", value: "-", period: "loading...", icon: <SubscribersIcon /> },
+      { title: "Monthly Revenue", value: "-", period: "loading...", icon: <MonthlyRevIcon /> },
+      { title: "Avg. Revenue per User", value: "-", period: "loading...", icon: <RevPerUserIcon /> },
+      { title: "Churn Rate", value: "-", period: "loading...", icon: <ChurnIcon /> },
+    ];
 
   const handleCreatePlan = async () => {
     if (!planName.trim()) {
@@ -216,7 +265,11 @@ export default function SubscriptionHome() {
       toast.error("Plan title is required");
       return;
     }
-    if (!planAmount.trim() || isNaN(Number(planAmount)) || Number(planAmount) <= 0) {
+    if (
+      !planAmount.trim() ||
+      isNaN(Number(planAmount)) ||
+      Number(planAmount) <= 0
+    ) {
       toast.error("Valid amount is required");
       return;
     }
@@ -230,29 +283,30 @@ export default function SubscriptionHome() {
     }
 
     setLoading(true);
-    
+
     try {
       const requestData = {
         name: planName.trim(),
-        title: planTitle.trim(),
-        description: planDescription.trim(),
-        amount: Number(planAmount),
-        duration: duration === "lifetime" ? "0" : duration,
+        price: String(planAmount),
+        billing_period: duration,
+        features: planDescription.split(",").map(f => f.trim()).filter(Boolean),
+        stripe_price_id: "price_xxx",
       };
 
-      const response = await dashboardApi.createSubscriptionPackage(requestData);
+      const response =
+        await dashboardApi.createPlan(requestData);
 
-      if (response.success) {
+      if (response.status) {
         toast.success("Subscription plan created successfully!");
-        
+
         await fetchSubscriptionPackages();
-        
+
         setPlanName("");
         setPlanTitle("");
         setPlanAmount("");
         setPlanDescription("");
         setDuration("");
-        
+
         setPlanModalOpen(false);
       } else {
         toast.error(response.message || "Failed to create subscription plan");
@@ -271,37 +325,49 @@ export default function SubscriptionHome() {
       toast.error("Promo code is required");
       return;
     }
-    if (!promoDiscount.trim() || isNaN(Number(promoDiscount)) || Number(promoDiscount) <= 0 || Number(promoDiscount) > 100) {
+    if (
+      !promoDiscount.trim() ||
+      isNaN(Number(promoDiscount)) ||
+      Number(promoDiscount) <= 0 ||
+      Number(promoDiscount) > 100
+    ) {
       toast.error("Valid discount percentage (1-100) is required");
       return;
     }
-    if (!promoMaxUses.trim() || isNaN(Number(promoMaxUses)) || Number(promoMaxUses) <= 0) {
+    if (
+      !promoMaxUses.trim() ||
+      isNaN(Number(promoMaxUses)) ||
+      Number(promoMaxUses) <= 0
+    ) {
       toast.error("Valid max usage is required");
       return;
     }
 
     setCreatingPromoCode(true);
-    
+
     try {
       const requestData = {
         code: promoCode.trim(),
-        discount: Number(promoDiscount),
-        maxUses: Number(promoMaxUses),
-        ...(promoExpiryDate && { expiresAt: new Date(promoExpiryDate).toISOString() })
+        discount: promoDiscount,
+        type: "percentage" as const,
+        max_users: Number(promoMaxUses),
+        ...(promoExpiryDate && {
+          expires_at: new Date(promoExpiryDate).toISOString(),
+        }),
       };
 
       const response = await dashboardApi.createPromoCode(requestData);
 
-      if (response.success) {
+      if (response.status) {
         toast.success("Promo code created successfully!");
-        
+
         await fetchPromoCodes();
-        
+
         setPromoCode("");
         setPromoDiscount("");
         setPromoMaxUses("");
         setPromoExpiryDate("");
-        
+
         setCodeModalOpen(false);
       } else {
         toast.error(response.message || "Failed to create promo code");
@@ -324,33 +390,44 @@ export default function SubscriptionHome() {
       );
     }
 
-    if (subscriptionPackages.length === 0) {
+    if (subscriptionPlans.length === 0) {
       return (
         <div className="text-center py-12 border border-[#2B303B] rounded-lg mt-6">
-          <p className="text-[#A5A5AB] text-lg">No subscription packages found</p>
-          <p className="text-[#717784] text-sm mt-2">Create your first subscription plan to get started</p>
+          <p className="text-[#A5A5AB] text-lg">
+            No subscription packages found
+          </p>
+          <p className="text-[#717784] text-sm mt-2">
+            Create your first subscription plan to get started
+          </p>
         </div>
       );
     }
 
-    const isSinglePlan = subscriptionPackages.length === 1;
+    const isSinglePlan = subscriptionPlans.length === 1;
 
     if (isSinglePlan) {
-      const plan = subscriptionPackages[0];
-      const features = getFeaturesFromDescription(plan.description);
-      
+      const plan = subscriptionPlans[0];
+      const features = plan.features || [];
+
       return (
         <div>
           <div className="p-4 border border-[#2B303B] mt-6 flex items-center justify-between rounded-t-lg">
             <div>
-              <h3 className="text-white text-base font-semibold">{plan.name}</h3>
-              <p className="text-[#A5A5AB] text-sm font-medium mt-1">{plan.title}</p>
+              <h3 className="text-white text-base font-semibold">
+                {plan.name}
+              </h3>
+              <p className="text-[#A5A5AB] text-sm font-medium mt-1">
+                {plan.description}
+              </p>
             </div>
             <div className="flex items-center gap-2">
-              <button className="cursor-pointer hover:bg-white/10 p-1 rounded">
+              <button className="cursor-pointer hover:bg-white/10 p-1 rounded" onClick={() => handleOpenEdit(plan)}>
                 <DocumentsIcon />
               </button>
-              <button className="cursor-pointer hover:bg-white/10 p-1 rounded">
+              <button
+                className="cursor-pointer hover:bg-white/10 p-1 rounded"
+                onClick={() => handleDeletePlan(plan.id, plan.name)}
+              >
                 <RedTrashIcon />
               </button>
             </div>
@@ -358,9 +435,9 @@ export default function SubscriptionHome() {
           <div className="border-x border-b border-[#2B303B] pt-6 px-4 pb-4 rounded-b-lg flex items-center gap-6">
             <div className="flex-3 text-white">
               <h2 className="text-white text-[32px] font-semibold">
-                ${plan.amount}
+                ${plan.price}
                 <span className="text-sm text-[#A5A5AB] font-medium ml-1">
-                  /{formatDurationDisplay(plan.duration)}
+                  /{formatDurationDisplay(plan.billing_period)}
                 </span>
               </h2>
             </div>
@@ -394,25 +471,29 @@ export default function SubscriptionHome() {
     }
 
     const getGridColumns = () => {
-      if (subscriptionPackages.length === 2) return "grid-cols-1 md:grid-cols-2";
+      if (subscriptionPlans.length === 2) return "grid-cols-1 md:grid-cols-2";
       return "grid-cols-1 md:grid-cols-2 lg:grid-cols-3";
     };
 
     return (
       <div className={`grid ${getGridColumns()} gap-6 mt-6`}>
-        {subscriptionPackages.map((plan) => {
-          const features = getFeaturesFromDescription(plan.description);
-          
+        {subscriptionPlans.map((plan) => {
+          const features = plan.features || [];
+
           return (
-            <div 
+            <div
               key={plan.id}
               className="border border-[#2B303B] rounded-lg overflow-hidden hover:border-[#00F474]/30 transition-colors duration-200"
             >
               <div className="p-4 bg-[#181B25] border-b border-[#2B303B]">
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <h3 className="text-white text-base font-semibold">{plan.name}</h3>
-                    <p className="text-[#A5A5AB] text-xs font-medium mt-1">{plan.title}</p>
+                    <h3 className="text-white text-base font-semibold">
+                      {plan.name}
+                    </h3>
+                    <p className="text-[#A5A5AB] text-xs font-medium mt-1">
+                      {plan.description}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button className="cursor-pointer hover:bg-white/10 p-1 rounded">
@@ -424,17 +505,17 @@ export default function SubscriptionHome() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="p-4 bg-[#0E121B]">
                 <div className="mb-4">
                   <h2 className="text-white text-2xl md:text-[28px] font-semibold">
-                    ${plan.amount}
+                    ${plan.price}
                     <span className="text-sm text-[#A5A5AB] font-medium ml-1">
-                      /{formatDurationDisplay(plan.duration)}
+                      /{formatDurationDisplay(plan.billing_period)}
                     </span>
                   </h2>
                 </div>
-                
+
                 <div className="space-y-2">
                   {features.length > 0 ? (
                     features.map((feature, index) => (
@@ -448,21 +529,25 @@ export default function SubscriptionHome() {
                       </div>
                     ))
                   ) : (
-                    <p className="text-sm text-[#717784] italic">No features specified</p>
+                    <p className="text-sm text-[#717784] italic">
+                      No features specified
+                    </p>
                   )}
                 </div>
-                
+
                 <div className="mt-4 flex items-center justify-between">
-                  <span className={`text-xs px-2 py-1 rounded ${plan.isActive ? 'bg-green-900/30 text-green-400' : 'bg-red-900/30 text-red-400'}`}>
-                    {plan.isActive ? 'Active' : 'Inactive'}
+                  <span
+                    className={`text-xs px-2 py-1 rounded ${plan.is_active ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400"}`}
+                  >
+                    {plan.is_active ? "Active" : "Inactive"}
                   </span>
                   <span className="text-xs text-[#A5A5AB]">
-                    {plan.currency.toUpperCase()}
+                    USD
                   </span>
                 </div>
-                
+
                 <button className="w-full mt-4 py-2.5 bg-[#00F474] text-[#1D1F2C] font-semibold rounded-lg hover:bg-[#00F474]/90 transition-colors active:scale-[0.98]">
-                  {plan.isActive ? 'Select Plan' : 'Inactive'}
+                  {plan.is_active ? "Select Plan" : "Inactive"}
                 </button>
               </div>
             </div>
@@ -486,7 +571,9 @@ export default function SubscriptionHome() {
       return (
         <div className="text-center py-12 border border-[#2B303B] rounded-lg mt-6">
           <p className="text-[#A5A5AB] text-lg">No promo codes found</p>
-          <p className="text-[#717784] text-sm mt-2">Create your first promo code to get started</p>
+          <p className="text-[#717784] text-sm mt-2">
+            Create your first promo code to get started
+          </p>
         </div>
       );
     }
@@ -497,21 +584,27 @@ export default function SubscriptionHome() {
           <div key={promo.id} className="p-4 bg-[#21252d] rounded-lg">
             <div className="flex items-center justify-between mb-3">
               <div className="flex-1">
-                <h3 className="text-2xl text-[#00F474] font-semibold">{promo.code}</h3>
+                <h3 className="text-2xl text-[#00F474] font-semibold">
+                  {promo.code}
+                </h3>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-lg font-bold text-white">{promo.discount}% OFF</span>
-                  <span className="text-[#A5A5AB] text-xs font-medium">Discount</span>
+                  <span className="text-lg font-bold text-white">
+                    {promo.discount}% OFF
+                  </span>
+                  <span className="text-[#A5A5AB] text-xs font-medium">
+                    Discount
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   className="cursor-pointer hover:bg-white/10 p-1.5 rounded transition-colors"
                   onClick={() => copyToClipboard(promo.code)}
                   title="Copy promo code"
                 >
                   <DocumentsIcon />
                 </button>
-                <button 
+                <button
                   className="cursor-pointer hover:bg-white/10 p-1.5 rounded"
                   onClick={() => handleDeletePromoCode(promo.id, promo.code)}
                   title="Delete promo code"
@@ -525,28 +618,38 @@ export default function SubscriptionHome() {
               <li className="flex items-center justify-between">
                 <p className="text-sm text-[#D2D2D5] font-medium">Status:</p>
                 <div className="flex items-center gap-2">
-                  <Switch 
-                    className="cursor-pointer" 
-                    checked={promo.isActive}
-                    onCheckedChange={() => handlePromoCodeToggle(promo.id, promo.isActive)}
+                  <Switch
+                    className="cursor-pointer"
+                    checked={promo.status === 'active'}
+                    onCheckedChange={() =>
+                      handlePromoCodeToggle(promo.id as unknown as number, promo.status === 'active')
+                    }
                   />
                 </div>
               </li>
               <li className="flex items-center justify-between">
                 <p className="text-sm text-[#D2D2D5] font-medium">Max Uses:</p>
-                <p className="text-sm text-white font-medium">{promo.maxUses}</p>
+                <p className="text-sm text-white font-medium">
+                  {promo.max_users}
+                </p>
               </li>
               <li className="flex items-center justify-between">
                 <p className="text-sm text-[#D2D2D5] font-medium">Used:</p>
-                <p className="text-sm text-white font-medium">{promo.usedCount}</p>
+                <p className="text-sm text-white font-medium">
+                  {promo.used_count}
+                </p>
               </li>
               <li className="flex items-center justify-between">
                 <p className="text-sm text-[#D2D2D5] font-medium">Expires:</p>
-                <p className="text-sm text-white font-medium">{formatDate(promo.expiresAt)}</p>
+                <p className="text-sm text-white font-medium">
+                  {formatDate(promo.expires_at)}
+                </p>
               </li>
               <li className="flex items-center justify-between">
                 <p className="text-sm text-[#D2D2D5] font-medium">Created:</p>
-                <p className="text-sm text-white font-medium">{formatDate(promo.createdAt)}</p>
+                <p className="text-sm text-white font-medium">
+                  {formatDate((promo as any).created_at)}
+                </p>
               </li>
             </ul>
           </div>
@@ -588,8 +691,12 @@ export default function SubscriptionHome() {
       <div className="bg-[#0E121B] p-6 rounded-lg mt-4.5">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-white text-2xl font-bold">Subscription Plans</h3>
-            <p className="text-[#A5A5AB] text-sm font-medium mt-1">Manage and customize your subscription packages</p>
+            <h3 className="text-white text-2xl font-bold">
+              Subscription Plans
+            </h3>
+            <p className="text-[#A5A5AB] text-sm font-medium mt-1">
+              Manage and customize your subscription packages
+            </p>
           </div>
 
           <button
@@ -601,7 +708,7 @@ export default function SubscriptionHome() {
             Add new plan
           </button>
         </div>
-        
+
         {renderSubscriptionCards()}
       </div>
 
@@ -609,7 +716,9 @@ export default function SubscriptionHome() {
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-white text-2xl font-bold">Promo Codes</h3>
-            <p className="text-[#A5A5AB] text-sm font-medium mt-1">Create and manage promotional discount codes</p>
+            <p className="text-[#A5A5AB] text-sm font-medium mt-1">
+              Create and manage promotional discount codes
+            </p>
           </div>
 
           <button
@@ -642,7 +751,12 @@ export default function SubscriptionHome() {
         <div className="mt-6 mb-8 space-y-5">
           <div className="flex items-center gap-5">
             <div className="flex-1">
-              <label htmlFor="plan-name" className="text-white text-sm font-medium">Plan Name*</label>
+              <label
+                htmlFor="plan-name"
+                className="text-white text-sm font-medium"
+              >
+                Plan Name*
+              </label>
               <input
                 type="text"
                 id="plan-name"
@@ -654,7 +768,12 @@ export default function SubscriptionHome() {
               />
             </div>
             <div className="flex-1">
-              <label htmlFor="plan-title" className="text-white text-sm font-medium">Plan Title*</label>
+              <label
+                htmlFor="plan-title"
+                className="text-white text-sm font-medium"
+              >
+                Plan Title*
+              </label>
               <input
                 type="text"
                 id="plan-title"
@@ -669,7 +788,12 @@ export default function SubscriptionHome() {
 
           <div className="flex items-center gap-5">
             <div className="flex-1">
-              <label htmlFor="plan-amount" className="text-white text-sm font-medium">Amount ($)*</label>
+              <label
+                htmlFor="plan-amount"
+                className="text-white text-sm font-medium"
+              >
+                Amount ($)*
+              </label>
               <input
                 type="number"
                 id="plan-amount"
@@ -682,28 +806,38 @@ export default function SubscriptionHome() {
               />
             </div>
             <div className="flex-1">
-              <label htmlFor="plan-duration" className="text-white text-sm font-medium">Duration*</label>
+              <label
+                htmlFor="plan-duration"
+                className="text-white text-sm font-medium"
+              >
+                Duration*
+              </label>
               <div className="mt-2">
-                <CustomDropdown 
-                  value={duration} 
-                  onChange={setDuration} 
+                <CustomDropdown
+                  value={duration}
+                  onChange={setDuration}
                   options={durationOptions}
                   className="w-full"
                   placeholder="Select duration"
-                  // disabled={loading}
+                // disabled={loading}
                 />
               </div>
             </div>
           </div>
 
           <div>
-            <label htmlFor="description" className="text-white text-sm font-medium">Description* (Features separated by comma)</label>
-            <textarea 
-              name="description" 
+            <label
+              htmlFor="description"
+              className="text-white text-sm font-medium"
+            >
+              Description* (Features separated by comma)
+            </label>
+            <textarea
+              name="description"
               id="description"
               value={planDescription}
               onChange={(e) => setPlanDescription(e.target.value)}
-              className="w-full p-3 text-white rounded-lg border border-[#2B303B] placeholder:text-sm placeholder:text-[#717784] placeholder:font-medium mt-2 h-[112px] bg-[#0E121B] resize-none focus:outline-none focus:border-[#00F474] focus:ring-1 focus:ring-[#00F474]/50" 
+              className="w-full p-3 text-white rounded-lg border border-[#2B303B] placeholder:text-sm placeholder:text-[#717784] placeholder:font-medium mt-2 h-[112px] bg-[#0E121B] resize-none focus:outline-none focus:border-[#00F474] focus:ring-1 focus:ring-[#00F474]/50"
               placeholder="AI-based spending analysis, Personalized savings suggestions, Weekly expense reports, Basic budget setup and tracking"
               disabled={loading}
             />
@@ -711,14 +845,14 @@ export default function SubscriptionHome() {
         </div>
 
         <div className="flex items-center justify-end gap-4 mb-6">
-          <button 
+          <button
             className="text-base text-[#99A0AE] font-semibold px-5 py-3 bg-[#181B25] rounded-lg cursor-pointer hover:bg-[#181B25]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => setPlanModalOpen(false)}
             disabled={loading}
           >
             Cancel
           </button>
-          <button 
+          <button
             className="text-base text-[#1D1F2C] font-semibold px-5 py-3 bg-[#00f474] rounded-lg cursor-pointer hover:bg-[#00F474]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             onClick={handleCreatePlan}
             disabled={loading}
@@ -733,8 +867,8 @@ export default function SubscriptionHome() {
             )}
           </button>
         </div>
-      </CustomModal>    
-      
+      </CustomModal>
+
       {/* Create Promo Code Modal */}
       <CustomModal
         isOpen={codeModalOpen}
@@ -750,7 +884,12 @@ export default function SubscriptionHome() {
       >
         <div className="mt-6 mb-8 space-y-5">
           <div>
-            <label htmlFor="code-name" className="text-white text-sm font-medium">Promo Code*</label>
+            <label
+              htmlFor="code-name"
+              className="text-white text-sm font-medium"
+            >
+              Promo Code*
+            </label>
             <input
               type="text"
               id="code-name"
@@ -761,10 +900,15 @@ export default function SubscriptionHome() {
               disabled={creatingPromoCode}
             />
           </div>
-          
+
           <div className="flex items-center gap-5">
             <div className="flex-1">
-              <label htmlFor="discount" className="text-white text-sm font-medium">Discount (%)*</label>
+              <label
+                htmlFor="discount"
+                className="text-white text-sm font-medium"
+              >
+                Discount (%)*
+              </label>
               <input
                 type="number"
                 id="discount"
@@ -778,7 +922,12 @@ export default function SubscriptionHome() {
               />
             </div>
             <div className="flex-1">
-              <label htmlFor="max-usage" className="text-white text-sm font-medium">Max Usage*</label>
+              <label
+                htmlFor="max-usage"
+                className="text-white text-sm font-medium"
+              >
+                Max Usage*
+              </label>
               <input
                 type="number"
                 id="max-usage"
@@ -791,9 +940,14 @@ export default function SubscriptionHome() {
               />
             </div>
           </div>
-          
+
           <div>
-            <label htmlFor="expiry-date" className="text-white text-sm font-medium">Expiry Date (Optional)</label>
+            <label
+              htmlFor="expiry-date"
+              className="text-white text-sm font-medium"
+            >
+              Expiry Date (Optional)
+            </label>
             <input
               type="date"
               id="expiry-date"
@@ -806,14 +960,14 @@ export default function SubscriptionHome() {
         </div>
 
         <div className="flex items-center justify-end gap-4 mb-6">
-          <button 
+          <button
             className="text-base text-[#99A0AE] font-semibold px-5 py-3 bg-[#181B25] rounded-lg cursor-pointer hover:bg-[#181B25]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => setCodeModalOpen(false)}
             disabled={creatingPromoCode}
           >
             Cancel
           </button>
-          <button 
+          <button
             className="text-base text-[#1D1F2C] font-semibold px-5 py-3 bg-[#00f474] rounded-lg cursor-pointer hover:bg-[#00F474]/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             onClick={handleCreatePromoCode}
             disabled={creatingPromoCode}
@@ -826,6 +980,77 @@ export default function SubscriptionHome() {
             ) : (
               "Create Promo Code"
             )}
+          </button>
+        </div>
+      </CustomModal>
+
+      {/* Edit Plan Modal */}
+      <CustomModal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        title="Edit Subscription Plan"
+        subTitle="Update plan details"
+      >
+        <div className="mt-6 mb-8 space-y-5">
+          <div>
+            <label htmlFor="edit-plan-name" className="text-white text-sm font-medium">Plan Name*</label>
+            <input
+              type="text"
+              id="edit-plan-name"
+              value={editPlanName}
+              onChange={(e) => setEditPlanName(e.target.value)}
+              className="w-full px-3 py-3 text-white rounded-lg border border-[#2B303B] placeholder:text-sm placeholder:text-[#717784] mt-2 bg-[#0E121B] focus:outline-none focus:border-[#00F474] focus:ring-1 focus:ring-[#00F474]/50"
+              disabled={loading}
+            />
+          </div>
+          <div>
+            <label htmlFor="edit-plan-price" className="text-white text-sm font-medium">Price ($)*</label>
+            <input
+              type="number"
+              id="edit-plan-price"
+              value={editPlanPrice}
+              onChange={(e) => setEditPlanPrice(e.target.value)}
+              className="w-full px-3 py-3 text-white rounded-lg border border-[#2B303B] placeholder:text-sm placeholder:text-[#717784] mt-2 bg-[#0E121B] focus:outline-none focus:border-[#00F474] focus:ring-1 focus:ring-[#00F474]/50"
+              disabled={loading}
+            />
+          </div>
+          <div>
+            <label htmlFor="edit-plan-period" className="text-white text-sm font-medium">Billing Period*</label>
+            <div className="mt-2">
+              <CustomDropdown
+                value={editPlanPeriod}
+                onChange={setEditPlanPeriod}
+                options={durationOptions}
+                className="w-full"
+                placeholder="Select duration"
+              />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="edit-plan-features" className="text-white text-sm font-medium">Features (comma separated)</label>
+            <textarea
+              id="edit-plan-features"
+              value={editPlanFeatures}
+              onChange={(e) => setEditPlanFeatures(e.target.value)}
+              className="w-full p-3 text-white rounded-lg border border-[#2B303B] placeholder:text-sm placeholder:text-[#717784] mt-2 h-[112px] bg-[#0E121B] resize-none focus:outline-none focus:border-[#00F474] focus:ring-1 focus:ring-[#00F474]/50"
+              disabled={loading}
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-4 mb-6">
+          <button
+            className="text-base text-[#99A0AE] font-semibold px-5 py-3 bg-[#181B25] rounded-lg cursor-pointer"
+            onClick={() => setEditModalOpen(false)}
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            className="text-base text-[#1D1F2C] font-semibold px-5 py-3 bg-[#00f474] rounded-lg cursor-pointer hover:bg-[#00F474]/90 flex items-center gap-2"
+            onClick={handleUpdatePlan}
+            disabled={loading}
+          >
+            {loading ? <><div className="w-4 h-4 border-2 border-[#1D1F2C] border-t-transparent rounded-full animate-spin"></div> Updating...</> : "Update Plan"}
           </button>
         </div>
       </CustomModal>

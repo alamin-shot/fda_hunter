@@ -12,8 +12,8 @@ import AddPredictionSidebar from "./AddPredictionSidebar";
 import DynamicTable from "../reusable/DynamicTable";
 import DynamicPagination from "../reusable/DynamicPagination";
 import { RecentPredictionColumn } from "../columns/RecentPredictionsColumn";
-import { dashboardApi } from "@/services/dashboardApi";
-import type { DashboardPredictionsResponse, Prediction } from "@/services/dashboardApi";
+import { dashboardApi, PredictionsOverview } from "@/services/dashboardApi";
+import type { Prediction } from "@/services/dashboardApi";
 import EditPredictionModal from "./EditPredictionModal";
 import toast from "react-hot-toast";
 
@@ -44,14 +44,15 @@ export default function Prediction() {
     currentPage: 1,
     itemsPerPage: 10,
     hasNextPage: false,
-    hasPrevPage: false
+    hasPrevPage: false,
   });
   const [predictionsError, setPredictionsError] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [selectedPrediction, setSelectedPrediction] = useState<Prediction | null>(null);
-  
+  const [selectedPrediction, setSelectedPrediction] =
+    useState<Prediction | null>(null);
+
   // Dashboard stats state
-  const [dashboardStats, setDashboardStats] = useState<DashboardPredictionsResponse["data"] | null>(null);
+  const [overview, setOverview] = useState<PredictionsOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,81 +74,81 @@ export default function Prediction() {
 
   // Fetch dashboard predictions stats data
   useEffect(() => {
-    const fetchDashboardStats = async () => {
+    const fetchOverview = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const response = await dashboardApi.getDashboardPredictionstats();
-        
-        if (response.success) {
-          setDashboardStats(response.data);
+        const response = await dashboardApi.getPredictionsOverview();
+
+        if (response.status) {
+          setOverview(response.data);
         } else {
-          throw new Error(response.message || "Failed to fetch dashboard statistics");
+          throw new Error(
+            response.message || "Failed to fetch predictions overview",
+          );
         }
       } catch (err: any) {
-        console.error("Error fetching dashboard stats:", err);
-        setError(err.message || "Failed to load dashboard statistics");
-        
-        // Set fallback empty stats from the API's error response
-        if (err.data) {
-          setDashboardStats(err.data);
-        } else {
-          setDashboardStats({
-            total_records: { total_records: 0, last_month: 0, status: "down" },
-            active_predictions: { current: 0, last_month: 0, status: "down" },
-            total_win: { total_win: 0, last_month: 0, status: "down" },
-            overall_win_rate: { win_rate: 0, last_month: 0, status: "down" }
-          });
-        }
+        console.error("Error fetching predictions overview:", err);
+        setError(err.message || "Failed to load predictions overview");
+        // Set fallback with default values
+        setOverview({
+          total_records: 0,
+          active_predictions: 0,
+          total_win: 0,
+          overall_win_rate: 0,
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchDashboardStats();
+    fetchOverview();
   }, []);
 
   // Fetch predictions data with proper API filtering
   const fetchPredictions = async (page: number = 1, limit: number = 10) => {
     try {
       setPredictionsLoading(true);
-      const response = await dashboardApi.getAllPredictions({
+      const params: any = {
         page,
-        limit,
-        search: searchTerm || undefined,
-        status: statusFilter || undefined,
-        category: categories || undefined,
-      });
-      
-      if (response.success) {
+        per_page: limit,
+      };
+
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+      if (statusFilter) {
+        params.status = statusFilter;
+      }
+      if (categories) {
+        params.category = Number(categories);
+      }
+
+      const response = await dashboardApi.getPredictions(params);
+
+      if (response.status) {
         setPredictions(response.data);
-        setPagination(response.pagination);
+
+        // Parse pagination from meta
+        if (response.meta?.pagination) {
+          const p = response.meta.pagination;
+          setPagination({
+            totalItems: p.total,
+            totalPages: p.last_page,
+            currentPage: p.current_page,
+            itemsPerPage: p.per_page,
+            hasNextPage: p.current_page < p.last_page,
+            hasPrevPage: p.current_page > 1,
+          });
+        }
         setPredictionsError(null);
       } else {
         setPredictionsError(response.message);
       }
     } catch (err: any) {
       console.error("Error fetching predictions:", err);
-      
-      // Handle invalid category error specifically
-      if (err.isInvalidCategoryError && err.validCategories) {
-        // Update categories dropdown with valid categories from API
-        const validCategories = err.validCategories.map((cat: string) => ({
-          value: cat,
-          label: cat
-        }));
-        setCategoriesOption(validCategories);
-        
-        // Reset category filter if it's invalid
-        if (categories && !err.validCategories.includes(categories)) {
-          setSelectedCategories("");
-        }
-        
-        setPredictionsError(err.message);
-      } else {
-        setPredictionsError(err.message || "Failed to load predictions");
-      }
-      
+      setPredictionsError(err.message || "Failed to load predictions");
+
       // Clear predictions on error
       setPredictions([]);
       setPagination({
@@ -156,7 +157,7 @@ export default function Prediction() {
         currentPage: 1,
         itemsPerPage: limit,
         hasNextPage: false,
-        hasPrevPage: false
+        hasPrevPage: false,
       });
     } finally {
       setPredictionsLoading(false);
@@ -200,6 +201,22 @@ export default function Prediction() {
   const handleItemsPerPageChange = (newItemsPerPage: number) => {
     fetchPredictions(1, newItemsPerPage);
   };
+  const handleDeleteClick = async (prediction: Prediction) => {
+    if (!confirm(`Delete prediction "${prediction.title}"?`)) return;
+
+    try {
+      const response = await dashboardApi.deletePrediction(prediction.id);
+      if (response.status) {
+        toast.success("Prediction deleted successfully!");
+        fetchPredictions(pagination.currentPage, pagination.itemsPerPage);
+        handleRefreshStats();
+      } else {
+        toast.error(response.message || "Failed to delete prediction");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete prediction");
+    }
+  };
 
   // Clear all filters
   const handleClearFilters = () => {
@@ -221,76 +238,76 @@ export default function Prediction() {
 
   // Create stat cards data from API response
   const statCardsData: StatCardProps[] = useMemo(() => {
-    if (!dashboardStats) {
+    if (!overview) {
       // Return loading/skeleton data
       return [
         {
           title: "Total Records",
           value: isLoading ? "Loading..." : 0,
-          period: "vs last month",
+          period: "total",
           icon: <TotalRecordsIcon />,
           isLoading,
         },
         {
           title: "Active Predictions",
           value: isLoading ? "Loading..." : 0,
-          period: "vs last month",
+          period: "active",
           icon: <ActivePredictionIcon />,
           isLoading,
         },
         {
           title: "Total Win",
           value: isLoading ? "Loading..." : 0,
-          period: "vs last month",
+          period: "wins",
           icon: <TotalWin />,
           isLoading,
         },
         {
           title: "Overall Win Rate",
           value: isLoading ? "Loading..." : "0%",
-          period: "vs last month",
+          period: "average",
           icon: <OverAllWinIcon />,
           isLoading,
         },
       ];
     }
-    
+
     // Format values from API
     const formatNumber = (value: number) => {
-      return new Intl.NumberFormat('en-US').format(value);
+      return new Intl.NumberFormat("en-US").format(value);
+    };
+
+    const formatPercentage = (value: number) => {
+      return `${value.toFixed(2)}%`;
     };
 
     return [
       {
         title: "Total Records",
-        value: formatNumber(dashboardStats.total_records.total_records),
-        period: getStatusText(dashboardStats.total_records.status),
+        value: formatNumber(overview.total_records),
+        period: "total",
         icon: <TotalRecordsIcon />,
-        status: dashboardStats.total_records.status
       },
       {
         title: "Active Predictions",
-        value: formatNumber(dashboardStats.active_predictions.current),
-        period: getStatusText(dashboardStats.active_predictions.status),
+        value: formatNumber(overview.active_predictions),
+        period: "active",
         icon: <ActivePredictionIcon />,
-        status: dashboardStats.active_predictions.status
       },
       {
         title: "Total Win",
-        value: formatNumber(dashboardStats.total_win.total_win),
-        period: getStatusText(dashboardStats.total_win.status),
+        value: formatNumber(overview.total_win),
+        period: "wins",
         icon: <TotalWin />,
-        status: dashboardStats.total_win.status
       },
       {
         title: "Overall Win Rate",
-        value: formatPercentage(dashboardStats.overall_win_rate.win_rate),
-        period: getStatusText(dashboardStats.overall_win_rate.status),
+        value: formatPercentage(overview.overall_win_rate),
+        period: "average",
         icon: <OverAllWinIcon />,
-        status: dashboardStats.overall_win_rate.status
       },
     ];
-  }, [dashboardStats, isLoading]);
+  }, [overview, isLoading]);
 
   const handleCloseAddSidebar = () => {
     setIsAddSidebarOpen(false);
@@ -312,22 +329,13 @@ export default function Prediction() {
   const handleRefreshStats = async () => {
     try {
       setIsLoading(true);
-      const response = await dashboardApi.getDashboardPredictionstats();
-      if (response.success) {
-        setDashboardStats(response.data);
+      const response = await dashboardApi.getPredictionsOverview();
+      if (response.status) {
+        setOverview(response.data);
         setError(null);
-        // toast.success("Dashboard stats refreshed", {
-        //   duration: 3000,
-        //   position: "top-right",
-        //   style: {
-        //     background: "#1A1F2E",
-        //     color: "#fff",
-        //     border: "1px solid #00F474",
-        //   },
-        // });
       }
     } catch (err: any) {
-      setError(err.message || "Failed to refresh dashboard statistics");
+      setError(err.message || "Failed to refresh predictions overview");
       toast.error("Failed to refresh stats", {
         duration: 4000,
         position: "top-right",
@@ -354,6 +362,20 @@ export default function Prediction() {
     // Refresh dashboard stats
     handleRefreshStats();
   };
+  const handleStatusChange = async (prediction: Prediction, newStatus: string) => {
+    try {
+      const response = await dashboardApi.updatePredictionStatus(prediction.id, newStatus);
+      if (response.status) {
+        toast.success(`Status updated to ${newStatus}`);
+        fetchPredictions(pagination.currentPage, pagination.itemsPerPage);
+        handleRefreshStats();
+      } else {
+        toast.error(response.message || "Failed to update status");
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || "Failed to update status");
+    }
+  };
 
   return (
     <div>
@@ -362,7 +384,7 @@ export default function Prediction() {
           title="Predictions Management"
           subtitle="Manage all your predictions across categories"
         />
-        
+
         {/* Error message */}
         {error && (
           <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
@@ -375,12 +397,12 @@ export default function Prediction() {
             </button>
           </div>
         )}
-        
+
         {/* Stats cards with API data */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
           {statCardsData.map((card, index) => (
             <div
-              className={`p-3 relative border border-[#2B303B] rounded-xl overflow-hidden ${card.isLoading ? 'animate-pulse' : ''}`}
+              className={`p-3 relative border border-[#2B303B] rounded-xl overflow-hidden ${card.isLoading ? "animate-pulse" : ""}`}
               key={index}
             >
               <div className="flex items-center gap-2">
@@ -389,17 +411,22 @@ export default function Prediction() {
                   {card.title}
                 </h3>
               </div>
-              <h2 className={`text-white text-2xl font-medium my-3 ${card.isLoading ? 'bg-gray-700 h-8 w-16 rounded animate-pulse' : ''}`}>
+              <h2
+                className={`text-white text-2xl font-medium my-3 ${card.isLoading ? "bg-gray-700 h-8 w-16 rounded animate-pulse" : ""}`}
+              >
                 {!card.isLoading && card.value}
               </h2>
-              <p className={`text-sm font-medium ${
-                card.status === 'up' ? 'text-green-400' : 
-                card.status === 'down' ? 'text-red-400' : 
-                'text-[#687588]'
-              }`}>
+              <p
+                className={`text-sm font-medium ${card.status === "up"
+                  ? "text-green-400"
+                  : card.status === "down"
+                    ? "text-red-400"
+                    : "text-[#687588]"
+                  }`}
+              >
                 {card.period}
               </p>
-              
+
               {/* Loading shimmer effect - similar to DashboardHome */}
               {card.isLoading && (
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer" />
@@ -408,7 +435,7 @@ export default function Prediction() {
           ))}
         </div>
       </div>
-      
+
       <div className="bg-[#0E121B] p-6 rounded-2xl mt-4">
         <div className="flex justify-between items-center">
           <h2 className="text-white text-xl font-bold">Recent Predictions</h2>
@@ -421,7 +448,7 @@ export default function Prediction() {
             Add new prediction
           </button>
         </div>
-        
+
         <div className="mt-5 flex flex-col lg:flex-row items-center w-full gap-3.5">
           <SearchBar
             placeholder="Search Picks"
@@ -452,19 +479,20 @@ export default function Prediction() {
             </button>
           )}
         </div>
-        
+
         <div className="mt-6">
           {predictionsError && (
             <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
               <p className="text-red-400 text-sm">{predictionsError}</p>
               {predictionsError.includes("Invalid category") && (
                 <p className="text-yellow-400 text-sm mt-1">
-                  Available categories: {categoriesOption.map(c => c.label).join(', ')}
+                  Available categories:{" "}
+                  {categoriesOption.map((c) => c.label).join(", ")}
                 </p>
               )}
             </div>
           )}
-          
+
           {predictionsLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
@@ -473,7 +501,7 @@ export default function Prediction() {
           ) : predictions.length > 0 ? (
             <>
               <DynamicTable
-                columns={RecentPredictionColumn(handleEditClick)}
+                columns={RecentPredictionColumn(handleEditClick, handleDeleteClick, handleStatusChange)}
                 data={predictions}
                 hasWrapperBorder={false}
                 headerStyles={{
@@ -487,7 +515,7 @@ export default function Prediction() {
                 minWidth={800}
                 cellBorderColor="#323B49"
               />
-              
+
               {/* Pagination Component */}
               <div className="mt-4">
                 <DynamicPagination
@@ -508,7 +536,9 @@ export default function Prediction() {
           ) : (
             <div className="text-center py-8">
               <p className="text-[#687588]">
-                {predictionsError ? "Error loading predictions" : "No predictions found"}
+                {predictionsError
+                  ? "Error loading predictions"
+                  : "No predictions found"}
               </p>
               {(searchTerm || categories || statusFilter) && (
                 <button
@@ -527,7 +557,7 @@ export default function Prediction() {
       <AddPredictionSidebar
         isOpen={isAddSidebarOpen}
         onClose={handleCloseAddSidebar}
-        onSuccess={handlePredictionCreated}   
+        onSuccess={handlePredictionCreated}
       />
 
       <EditPredictionModal

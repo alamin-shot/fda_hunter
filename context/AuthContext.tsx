@@ -1,17 +1,26 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
-import authApi, { LoginRequest, LoginResponse } from '@/services/authApi';
-import toast from 'react-hot-toast';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { useRouter } from "next/navigation";
+import authApi, {
+  LoginRequest,
+  LoginResponse,
+  UserData,
+} from "@/services/authApi";
+import toast from "react-hot-toast";
 
 interface AuthContextType {
   isLoading: boolean;
   login: (credentials: LoginRequest) => Promise<LoginResponse>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
-  userType: string | null;
-  userEmail: string | null;
+  user: UserData | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,7 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -29,111 +38,88 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [authState, setAuthState] = useState({
-    isAuthenticated: authApi.isAuthenticated(),
-    userType: authApi.getUserType(),
-    userEmail: authApi.getUserEmail()
-  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<UserData | null>(null);
   const router = useRouter();
 
-  // Check initial auth state
+  // Check auth on mount
   useEffect(() => {
-    const checkAuth = () => {
-      const authStatus = {
-        isAuthenticated: authApi.isAuthenticated(),
-        userType: authApi.getUserType(),
-        userEmail: authApi.getUserEmail()
-      };
-      setAuthState(authStatus);
-      console.log("Initial auth check:", authStatus);
-    };
-    
-    checkAuth();
-    
-    // Listen for storage changes (for logout from other tabs)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'token' || e.key === 'user_type') {
-        checkAuth();
+    const checkAuth = async () => {
+      try {
+        const authenticated = await authApi.isAuthenticated();
+        setIsAuthenticated(authenticated);
+        if (authenticated) {
+          // Try to get profile for user data
+          try {
+            const { dashboardApi } = await import("@/services/dashboardApi");
+            const profile = await dashboardApi.getProfile();
+            if (profile.status) {
+              setUser(profile.data as any);
+            }
+          } catch {
+            // Profile fetch failed, but user is still authenticated
+          }
+        }
+      } catch {
+        setIsAuthenticated(false);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
       }
     };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    checkAuth();
   }, []);
 
   const login = async (credentials: LoginRequest): Promise<LoginResponse> => {
     try {
       setIsLoading(true);
       const response = await authApi.login(credentials);
-      
-      if (response.success) {
-        // Update auth state after login
-        setAuthState({
-          isAuthenticated: true,
-          userType: authApi.getUserType(),
-          userEmail: authApi.getUserEmail()
-        });
-        
-        console.log("Login successful - Context updated");
-        
-        // Show success toast
-        
+
+      if (response.status) {
+        setIsAuthenticated(true);
+        setUser(response.data.user);
+        if (response.data.access_token) {
+          localStorage.setItem("access_token", response.data.access_token);
+        }
+        toast.success("Login successful!");
       }
-      
+
       return response;
     } catch (error: any) {
-      console.error('Login error in context:', error);
-      toast.error(error.message || 'Login failed');
+      toast.error(error.message || "Login failed");
       throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-// AuthContext.tsx (logout function only - already implemented)
-const logout = async (): Promise<void> => {
-  try {
-    setIsLoading(true);
-    
-    // Clear all authentication data
-    authApi.clearAuth();
-    
-    // Update state immediately
-    setAuthState({
-      isAuthenticated: false,
-      userType: null,
-      userEmail: null
-    });
-    
-    console.log("Logout successful - All tokens removed");
-    
-    // Show success message
-    toast.success('Logged out successfully');
-    
-    // Redirect to home page
-    router.push('/');
-    
-    // Force a router refresh to clear any cached protected routes
-    setTimeout(() => {
-      router.refresh();
-    }, 100);
-    
-  } catch (error) {
-    console.error('Logout error:', error);
-    toast.error('Logout failed. Please try again.');
-    throw error;
-  } finally {
-    setIsLoading(false);
-  }
-};
+  const logout = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      await authApi.logout();
+      setIsAuthenticated(false);
+      setUser(null);
+      localStorage.removeItem("access_token");
+      toast.success("Logged out successfully");
+      router.push("/");
+    } catch (error) {
+      // Even if logout API fails, clear local state
+      setIsAuthenticated(false);
+      setUser(null);
+      localStorage.removeItem("access_token");
+      router.push("/");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value: AuthContextType = {
     isLoading,
     login,
     logout,
-    isAuthenticated: authState.isAuthenticated,
-    userType: authState.userType,
-    userEmail: authState.userEmail,
+    isAuthenticated,
+    user,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

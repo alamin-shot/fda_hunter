@@ -10,8 +10,7 @@ import CustomDropdown from "../reusable/CustomDropdown";
 import DynamicTable from "../reusable/DynamicTable";
 import { UsersColumn } from "../columns/UsersColumn";
 import DynamicPagination from "../reusable/DynamicPagination";
-import { dashboardApi } from "@/services/dashboardApi";
-import { User, UsersListResponse } from "@/services/dashboardApi";
+import { dashboardApi, User, UsersOverview } from "@/services/dashboardApi";
 
 interface StatCardProps {
   title: string;
@@ -25,19 +24,14 @@ export default function UsersHome() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [promoCodeFilter, setPromoCodeFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  
+
   // Stats state
-  const [stats, setStats] = useState({
-    totalUsersTrend: "0",
-    activeUsersTrend: "0",
-    promoUsersTrend: "0",
-    newUsersToday: 0
-  });
-  
+  const [overview, setOverview] = useState<UsersOverview | null>(null);
+
   // Users list state
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -50,24 +44,24 @@ export default function UsersHome() {
   const statusOptions = [
     { value: "all", label: "All Status" },
     { value: "active", label: "Active" },
-    { value: "expired", label: "Expired" }
+    { value: "expired", label: "Expired" },
   ];
 
   const promoCodeOptions = [
     { value: "all", label: "All Promo Codes" },
     { value: "used", label: "Used" },
-    { value: "unused", label: "Not Used" }
+    { value: "unused", label: "Not Used" },
   ];
 
   // Fetch users statistics
   const fetchUsersStats = async () => {
     try {
-      const response = await dashboardApi.getUsersStats();
-      if (response.success) {
-        setStats(response.data);
+      const response = await dashboardApi.getUsersOverview();
+      if (response.status) {
+        setOverview(response.data);
       }
     } catch (error) {
-      console.error("Failed to fetch users stats:", error);
+      console.error("Failed to fetch users overview:", error);
     }
   };
 
@@ -75,23 +69,29 @@ export default function UsersHome() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const params = {
+      const params: any = {
         page: currentPage,
-        limit: itemsPerPage,
-        search: searchTerm || undefined,
-        status: statusFilter !== "all" ? statusFilter : undefined,
-        promoCode: promoCodeFilter !== "all" ? promoCodeFilter : undefined,
+        per_page: itemsPerPage,
       };
 
-      const response: UsersListResponse = await dashboardApi.getAllUsers(params);
-      if (response.success) {
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+
+      const response = await dashboardApi.getUsers(params);
+      if (response.status) {
         setUsers(response.data);
-        setTotalItems(response.pagination.totalItems);
-        setTotalPages(response.pagination.totalPages);
-        setCurrentPage(response.pagination.currentPage);
-        setItemsPerPage(response.pagination.itemsPerPage);
-        setHasNextPage(response.pagination.hasNextPage);
-        setHasPrevPage(response.pagination.hasPrevPage);
+
+        // Parse pagination from meta
+        if (response.meta?.pagination) {
+          const p = response.meta.pagination;
+          setTotalItems(p.total);
+          setTotalPages(p.last_page);
+          setCurrentPage(p.current_page);
+          setItemsPerPage(p.per_page);
+          setHasNextPage(p.current_page < p.last_page);
+          setHasPrevPage(p.current_page > 1);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch users:", error);
@@ -139,32 +139,59 @@ export default function UsersHome() {
   };
 
   // Prepare stat cards data with actual API data
-  const statCardsData: StatCardProps[] = [
-    {
-      title: "Total Users",
-      value: stats.totalUsersTrend, // Show the API trend value directly
-      period: "vs last month",
-      icon: <DoubleUsersl />,
-    },
-    {
-      title: "Active Users",
-      value: stats.activeUsersTrend, // Show the API trend value directly
-      period: "vs last month",
-      icon: <TikUsers />,
-    },
-    {
-      title: "New Today",
-      value: stats.newUsersToday, // Show the API value directly
-      period: "vs last month",
-      icon: <PlusUsers />,
-    },
-    {
-      title: "Promo code Users",
-      value: stats.promoUsersTrend, // Show the API trend value directly
-      period: "vs last month",
-      icon: <Token />,
-    },
-  ];
+  const statCardsData: StatCardProps[] = overview
+    ? [
+        {
+          title: "Total Users",
+          value: overview.total_users,
+          period: "all time",
+          icon: <DoubleUsersl />,
+        },
+        {
+          title: "Active Users",
+          value: overview.active_users,
+          period: "currently active",
+          icon: <TikUsers />,
+        },
+        {
+          title: "New Today",
+          value: overview.new_today,
+          period: "today",
+          icon: <PlusUsers />,
+        },
+        {
+          title: "Promo code Users",
+          value: overview.promo_code_users,
+          period: "using promos",
+          icon: <Token />,
+        },
+      ]
+    : [
+        {
+          title: "Total Users",
+          value: "-",
+          period: "loading...",
+          icon: <DoubleUsersl />,
+        },
+        {
+          title: "Active Users",
+          value: "-",
+          period: "loading...",
+          icon: <TikUsers />,
+        },
+        {
+          title: "New Today",
+          value: "-",
+          period: "loading...",
+          icon: <PlusUsers />,
+        },
+        {
+          title: "Promo code Users",
+          value: "-",
+          period: "loading...",
+          icon: <Token />,
+        },
+      ];
 
   return (
     <div>

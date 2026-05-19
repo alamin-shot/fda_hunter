@@ -2,39 +2,26 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import toast from 'react-hot-toast';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
-  allowedRoles?: Array<'admin' | 'user'>;
   redirectTo?: string;
 }
 
 const PrivateRoute: React.FC<PrivateRouteProps> = ({ 
   children, 
-  allowedRoles = ['admin', 'user'],
   redirectTo = '/'
 }) => {
-  const { isAuthenticated, isLoading, userType } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (isLoading) return;
 
     if (!isAuthenticated) {
-      // Toast message removed as requested
       router.push(redirectTo);
-      return;
     }
-
-    // Check role-based access
-    if (userType && allowedRoles.length > 0 && !allowedRoles.includes(userType as 'admin' | 'user')) {
-      toast.error("You don't have permission to access this page", {
-        id: 'no-permission',
-      });
-      router.push('/unauthorized');
-    }
-  }, [isAuthenticated, isLoading, userType, router, allowedRoles, redirectTo]);
+  }, [isAuthenticated, isLoading, router, redirectTo]);
 
   if (isLoading) {
     return (
@@ -48,19 +35,15 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({
     return null;
   }
 
-  if (userType && allowedRoles.length > 0 && !allowedRoles.includes(userType as 'admin' | 'user')) {
-    return null;
-  }
-
   return <>{children}</>;
 };
 
 export const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <PrivateRoute allowedRoles={['admin']}>{children}</PrivateRoute>;
+  return <PrivateRoute>{children}</PrivateRoute>;
 };
 
 export const UserRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <PrivateRoute allowedRoles={['user']}>{children}</PrivateRoute>;
+  return <PrivateRoute>{children}</PrivateRoute>;
 };
 
 export default PrivateRoute;

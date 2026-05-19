@@ -1,90 +1,81 @@
-import Image from "next/image";
 import React from "react";
 
-// Define the column configuration
 export const PredictionColumn = [
   {
-    label: "Sports Type",
-    width: "15%",
-    accessor: "category",  // Changed from "sportsType" to "category"
+    label: "Category",
+    width: "12%",
+    accessor: "category",
     sortable: true,
-    formatter: (value: string, row: any) => {
+    formatter: (value: any) => {
+      const name = value?.name || "Unknown";
+      const colors: Record<string, string> = {
+        Sports: "bg-[#7C4DFF]/20 text-[#7C4DFF]",
+        Casino: "bg-[#00C853]/20 text-[#00C853]",
+        Stocks: "bg-[#46B8FF]/20 text-[#46B8FF]",
+        Crypto: "bg-[#F7931A]/20 text-[#F7931A]",
+      };
       return (
-        <div className="flex items-center gap-2">
-          {row?.image && (
-            <div className="w-13 h-8 flex items-center justify-center bg-[#323B49] rounded-lg">
-              <img 
-                src={row.image} 
-                alt="sports img"
-                className="w-full h-full object-cover rounded-lg"
-                onError={(e) => {
-                  // Hide image container if image fails to load
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  target.parentElement!.innerHTML = '';
-                }}
-              />
-            </div>
-          )}
-          <span className="text-white text-sm font-medium">
-            {value}
-          </span>
-        </div>
+        <span className={`px-3 py-1 rounded-lg text-sm font-medium ${colors[name] || "bg-gray-700 text-gray-300"}`}>
+          {name}
+        </span>
       );
     },
+  },
+  {
+    label: "Title",
+    width: "22%",
+    accessor: "title",
+    sortable: true,
+    formatter: (value: string) => (
+      <span className="text-white text-sm font-medium">{value}</span>
+    ),
   },
   {
     label: "Status",
-    width: "15%",
-    accessor: "status",  // Added Status column
+    width: "10%",
+    accessor: "status",
     sortable: true,
-    formatter: (value: string) => {
-     
-
-      return (
-        <div className="flex items-center">
-         
-            <span className={`text-sm font-medium  text-white text-base`}>
-              {value}
-            </span>
-         
-        </div>
-      );
+    formatter: (value: string | null) => {
+      const config: Record<string, { color: string; label: string }> = {
+        win: { color: "bg-[#22C55E] text-white", label: "Win" },
+        loss: { color: "bg-[#EF4444] text-white", label: "Loss" },
+        active: { color: "bg-[#3B82F6] text-white", label: "Active" },
+        pending: { color: "bg-[#F9C80E] text-gray-900", label: "Pending" },
+      };
+      const c = config[value?.toLowerCase() || ""] || { color: "bg-gray-800 text-gray-400", label: value || "N/A" };
+      return <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${c.color}`}>{c.label}</span>;
     },
+  },
+  {
+    label: "Confidence",
+    width: "10%",
+    accessor: "confidence_level",
+    sortable: true,
+    formatter: (value: number) => (
+      <span className="text-white text-sm font-medium">{value}%</span>
+    ),
   },
   {
     label: "Created",
-    width: "12%",
-    accessor: "createdAt",  // Changed from "createdDate" to "createdAt"
+    width: "14%",
+    accessor: "created_at",
     sortable: true,
     formatter: (value: string) => {
       const date = new Date(value);
-      const today = new Date();
-      const sevenDaysAgo = new Date(today);
-      sevenDaysAgo.setDate(today.getDate() - 7);
-      const isRecent = date >= sevenDaysAgo;
-      
       return (
-        <div className="flex flex-col">
-          <span className="text-sm text-white">
-            {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-          </span>
-        
-        </div>
+        <span className="text-sm text-white">
+          {date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+        </span>
       );
     },
   },
   {
-    label: "Notes",
-    width: "20%",
-    accessor: "description",  // Changed from "teamName" to "description"
+    label: "Win Rate",
+    width: "8%",
+    accessor: "win_rate",
     sortable: true,
-    formatter: (value: string) => {
-      return (
-        <div className="text-sm text-white    " title={value}>
-          {value}
-        </div>
-      );
-    },
+    formatter: (value: string | null) => (
+      <span className="text-white text-sm">{value ? `${value}%` : "-"}</span>
+    ),
   },
 ];

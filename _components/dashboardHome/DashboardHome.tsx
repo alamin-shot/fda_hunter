@@ -1,19 +1,21 @@
-'use client'
-import React, { useState, useEffect, useMemo } from "react";  
+"use client";
+import React, { useState, useEffect, useMemo } from "react";
 import PageHeader from "../reusable/PageHeader";
 import WinRateIcon from "../icons/dashboardHome/WinRateIcon";
 import StaticsIcon from "../icons/sidebar/StaticsIcon";
 import WalletIcon from "../icons/sidebar/WalletIcon";
 import UsersIcon from "../icons/sidebar/UsersIcon";
-import { ChartRadialStacked } from "./ChartRadialStacked";
 import { SearchBar } from "../reusable/SearchBar";
 import DynamicTable from "../reusable/DynamicTable";
 import { PredictionColumn } from "../columns/PredictionColumn";
 import DynamicPagination from "../reusable/DynamicPagination";
-import { ChartBarMultiple } from "./ChartMultipleBar";
-import CustomDropdown from "../reusable/CustomDropdown";
-import {  dashboardApi, DashboardStats, Prediction } from "@/services/dashboardApi";
- 
+import ConfidenceVsOutcomeChart from "../charts/ConfidenceVsOutcomeChart";
+import TotalWinRateGauge from "../charts/TotalWinRateGauge";
+import {
+  dashboardApi,
+  PredictionsOverview,
+  Prediction,
+} from "@/services/dashboardApi";
 
 interface StatCardProps {
   title: string;
@@ -24,12 +26,12 @@ interface StatCardProps {
 }
 
 export default function DashboardHome() {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [month, setMonth] = useState('January');
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [overview, setOverview] = useState<PredictionsOverview | null>(null);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
+  const [allPredictions, setAllPredictions] = useState<Prediction[]>([]); // For charts
   const [predictionsLoading, setPredictionsLoading] = useState(true);
   const [predictionsError, setPredictionsError] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
@@ -38,54 +40,73 @@ export default function DashboardHome() {
     currentPage: 1,
     itemsPerPage: 10,
     hasNextPage: false,
-    hasPrevPage: false
+    hasPrevPage: false,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const monthOptions = [
-    { label: 'last 6 month', value: 'Last 6 month' },
-    { label: 'last 3 month', value: 'Last 3 month' },
-  ]
-  
   // Fetch dashboard stats on component mount
   useEffect(() => {
-    const fetchDashboardStats = async () => {
+    const fetchOverview = async () => {
       try {
         setLoading(true);
-        const response = await dashboardApi.getDashboardStats();
-        if (response.success) {
-          setDashboardStats(response.data);
+        const response = await dashboardApi.getPredictionsOverview();
+        if (response.status) {
+          setOverview(response.data);
           setError(null);
         } else {
           setError(response.message);
         }
       } catch (err: any) {
-        console.error("Error fetching dashboard stats:", err);
+        console.error("Error fetching predictions overview:", err);
         setError(err.message || "Failed to load dashboard statistics");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDashboardStats();
+    fetchOverview();
   }, []);
-  
+
+  // Fetch ALL predictions for charts (no pagination limit)
+  useEffect(() => {
+    const fetchAllForCharts = async () => {
+      try {
+        const response = await dashboardApi.getPredictions({
+          per_page: 100, // Get enough for chart calculations
+        });
+        if (response.status) {
+          setAllPredictions(response.data);
+        }
+      } catch (err) {
+        console.error("Error fetching all predictions for charts:", err);
+      }
+    };
+    fetchAllForCharts();
+  }, []);
+
   // Fetch predictions data
   const fetchPredictions = async (page: number = 1, limit: number = 10) => {
     try {
       setPredictionsLoading(true);
-      const response = await dashboardApi.getAllPredictions({
+      const response = await dashboardApi.getPredictions({
         page,
-        limit,
-        search: search || undefined,
+        per_page: limit,
       });
-      
-      if (response.success) {
+
+      if (response.status) {
         setPredictions(response.data);
-        setPagination(response.pagination);
-        setCurrentPage(response.pagination.currentPage);
-        setItemsPerPage(response.pagination.itemsPerPage);
+        if (response.meta?.pagination) {
+          const p = response.meta.pagination;
+          setPagination({
+            totalItems: p.total,
+            totalPages: p.last_page,
+            currentPage: p.current_page,
+            itemsPerPage: p.per_page,
+            hasNextPage: p.current_page < p.last_page,
+            hasPrevPage: p.current_page > 1,
+          });
+        }
         setPredictionsError(null);
       } else {
         setPredictionsError(response.message);
@@ -103,7 +124,7 @@ export default function DashboardHome() {
     fetchPredictions(currentPage, itemsPerPage);
   }, []);
 
-  // Filter data based on search - Now using API search
+  // Filter data based on search
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       if (search !== undefined) {
@@ -126,104 +147,104 @@ export default function DashboardHome() {
     setCurrentPage(1);
     fetchPredictions(1, newItemsPerPage);
   };
-  
+
+  // Compute gauge chart data from predictions
+  const gaugeData = useMemo(() => {
+    const categories: Record<string, { total: number; wins: number }> = {};
+
+    allPredictions.forEach((p) => {
+      const name = p.category.name;
+      if (!categories[name]) {
+        categories[name] = { total: 0, wins: 0 };
+      }
+      categories[name].total++;
+      if (p.status === "win") {
+        categories[name].wins++;
+      }
+    });
+
+    const colors: Record<string, string> = {
+      Sports: "#7C4DFF",
+      Casino: "#00C853",
+      Stocks: "#46B8FF",
+      Crypto: "#31384A",
+    };
+
+    return Object.entries(categories).map(([name, stats]) => ({
+      name,
+      value: stats.total > 0 ? (stats.wins / stats.total) * 100 : 0,
+      color: colors[name] || "#6B7280",
+    }));
+  }, [allPredictions]);
+
+  // Compute overall win rate for gauge center
+  const overallWinRate = useMemo(() => {
+    if (!overview) return 0;
+    return overview.overall_win_rate;
+  }, [overview]);
+
+  // Compute bar chart data (monthly confidence vs actual)
+  const barChartData = useMemo(() => {
+    const monthMap: Record<string, { confidenceSum: number; count: number; wins: number; total: number }> = {};
+
+    allPredictions.forEach((p) => {
+      const date = new Date(p.scheduled_at);
+      const monthKey = date.toLocaleString("en-US", { month: "short" });
+
+      if (!monthMap[monthKey]) {
+        monthMap[monthKey] = { confidenceSum: 0, count: 0, wins: 0, total: 0 };
+      }
+
+      monthMap[monthKey].confidenceSum += p.confidence_level;
+      monthMap[monthKey].count++;
+      monthMap[monthKey].total++;
+      if (p.status === "win") {
+        monthMap[monthKey].wins++;
+      }
+    });
+
+    // Get last 6 months in order
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const currentMonth = new Date().getMonth();
+    const last6Months: string[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const idx = (currentMonth - i + 12) % 12;
+      last6Months.push(months[idx]);
+    }
+
+    return last6Months.map((month) => ({
+      month,
+      confidence: monthMap[month]
+        ? Math.round(monthMap[month].confidenceSum / monthMap[month].count)
+        : 0,
+      actual: monthMap[month] && monthMap[month].total > 0
+        ? Math.round((monthMap[month].wins / monthMap[month].total) * 100)
+        : 0,
+    }));
+  }, [allPredictions]);
+
   // Dashboard stats cards data
   const statCardsData: StatCardProps[] = useMemo(() => {
-    if (!dashboardStats) {
-      // Return loading/skeleton data
+    if (!overview) {
       return [
-        {
-          title: "Overall Win Rate",
-          value: loading ? "Loading..." : "0%",
-          period: "vs last month",
-          icon: <WinRateIcon />,
-        },
-        {
-          title: "Active Predictions",
-          value: loading ? "Loading..." : 0,
-          period: "vs last month",
-          icon: <StaticsIcon />,
-        },
-        {
-          title: "Total Subscribers",
-          value: loading ? "Loading..." : "0",
-          period: "vs last month",
-          icon: <WalletIcon />,
-        },
-        {
-          title: "Monthly Revenue",
-          value: loading ? "Loading..." : "$0",
-          period: "vs last month",
-          icon: <UsersIcon />,
-        },
+        { title: "Overall Win Rate", value: loading ? "Loading..." : "0%", period: "vs last month", icon: <WinRateIcon /> },
+        { title: "Active Predictions", value: loading ? "Loading..." : 0, period: "vs last month", icon: <StaticsIcon /> },
+        { title: "Total Records", value: loading ? "Loading..." : "0", period: "vs last month", icon: <WalletIcon /> },
+        { title: "Total Win", value: loading ? "Loading..." : "$0", period: "vs last month", icon: <UsersIcon /> },
       ];
     }
 
-    // Format values from API
-    const formatCurrency = (value: number) => {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-      }).format(value);
-    };
-
-    const formatNumber = (value: number) => {
-      return new Intl.NumberFormat('en-US').format(value);
-    };
-
-    const getStatusText = (status: "up" | "down") => {
-      return status === "up" ? "vs last month ↑" : "vs last month ↓";
-    };
+    const formatNumber = (value: number) => new Intl.NumberFormat("en-US").format(value);
+    const formatPercentage = (value: number) => `${value.toFixed(2)}%`;
 
     return [
-      {
-        title: "Overall Win Rate",
-        value: `${dashboardStats.overall_win_rate.win_rate}%`,
-        period: getStatusText(dashboardStats.overall_win_rate.status),
-        icon: <WinRateIcon />,
-        status: dashboardStats.overall_win_rate.status
-      },
-      {
-        title: "Active Predictions",
-        value: formatNumber(dashboardStats.active_predictions.current),
-        period: getStatusText(dashboardStats.active_predictions.status),
-        icon: <StaticsIcon />,
-        status: dashboardStats.active_predictions.status
-      },
-      {
-        title: "Total Subscribers",
-        value: formatNumber(dashboardStats.total_subscribers.total),
-        period: getStatusText(dashboardStats.total_subscribers.status),
-        icon: <WalletIcon />,
-        status: dashboardStats.total_subscribers.status
-      },
-      {
-        title: "Monthly Revenue",
-        value: formatCurrency(dashboardStats.monthly_revenue.value),
-        period: getStatusText(dashboardStats.monthly_revenue.status),
-        icon: <UsersIcon />,
-        status: dashboardStats.monthly_revenue.status
-      },
+      { title: "Overall Win Rate", value: formatPercentage(overview.overall_win_rate), period: "average", icon: <WinRateIcon /> },
+      { title: "Active Predictions", value: formatNumber(overview.active_predictions), period: "currently active", icon: <StaticsIcon /> },
+      { title: "Total Records", value: formatNumber(overview.total_records), period: "total", icon: <WalletIcon /> },
+      { title: "Total Win", value: formatNumber(overview.total_win), period: "wins", icon: <UsersIcon /> },
     ];
-  }, [dashboardStats, loading]);
-  
-  const handleRefreshStats = async () => {
-    try {
-      setLoading(true);
-      const response = await dashboardApi.getDashboardStats();
-      if (response.success) {
-        setDashboardStats(response.data);
-        setError(null);
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to refresh dashboard statistics");
-    } finally {
-      setLoading(false);
-    }
-  };
-  
+  }, [overview, loading]);
+
   return (
     <div>
       <div className="bg-[#0E121B] p-6 rounded-xl">
@@ -236,7 +257,6 @@ export default function DashboardHome() {
           />
         </div>
 
-        {/* Error message */}
         {error && (
           <div className="mt-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
             <p className="text-red-400 text-sm">{error}</p>
@@ -245,25 +265,14 @@ export default function DashboardHome() {
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
           {statCardsData.map((card, index) => (
-            <div
-              className="p-3 relative border border-[#2B303B] rounded-xl overflow-hidden"
-              key={index}
-            >
+            <div className="p-3 relative border border-[#2B303B] rounded-xl overflow-hidden" key={index}>
               <div className="flex items-center gap-2">
                 <div className="bg-[#181B25] p-2 rounded-xl">{card.icon}</div>
                 <h3 className="text-white text-base font-medium">{card.title}</h3>
               </div>
               <h2 className="text-white text-2xl font-medium my-3">{card.value}</h2>
-              <p className={`text-sm font-medium ${
-                card.status === 'up' ? 'text-green-400' : 
-                card.status === 'down' ? 'text-red-400' : 
-                'text-[#687588]'
-              }`}>
-                {card.period}
-              </p>
-              
-              {/* Loading shimmer effect */}
-              {loading && !dashboardStats && (
+              <p className="text-sm font-medium text-[#687588]">{card.period}</p>
+              {loading && !overview && (
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer" />
               )}
             </div>
@@ -271,25 +280,45 @@ export default function DashboardHome() {
         </div>
       </div>
 
+      {/* Charts Row */}
+      <div className="mt-4.5 grid grid-cols-1 lg:grid-cols-2 gap-4.5">
+        {allPredictions.length > 0 ? (
+          <>
+            <ConfidenceVsOutcomeChart data={barChartData} />
+            <TotalWinRateGauge data={gaugeData} overallWinRate={overallWinRate} />
+          </>
+        ) : (
+          <>
+            <div className="rounded-3xl bg-[#050B1A] p-6 text-white flex items-center justify-center h-[400px]">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white mx-auto mb-3"></div>
+                <p className="text-gray-400">Loading chart data...</p>
+              </div>
+            </div>
+            <div className="rounded-3xl bg-[#050B1A] p-6 text-white flex items-center justify-center h-[400px]">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-white mx-auto mb-3"></div>
+                <p className="text-gray-400">Loading chart data...</p>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
       {/* Table Section with Pagination */}
       <div className="bg-[#0E121B] mt-4.5 p-6 rounded-2xl">
         <div className="flex justify-between items-center">
           <h2 className="text-xl text-white font-bold">Recent Predictions</h2>
-          <SearchBar 
-            value={search} 
-            onChange={setSearch} 
-            className="max-w-md" 
-            placeholder="Search Picks"
-          />
+          <SearchBar value={search} onChange={setSearch} className="max-w-md" placeholder="Search Picks" />
         </div>
-        
+
         <div className="mt-6">
           {predictionsError && (
             <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
               <p className="text-red-400 text-sm">{predictionsError}</p>
             </div>
           )}
-          
+
           {predictionsLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
@@ -312,8 +341,6 @@ export default function DashboardHome() {
                 minWidth={800}
                 cellBorderColor="#323B49"
               />
-              
-              {/* Pagination Component */}
               <div className="mt-4">
                 <DynamicPagination
                   currentPage={pagination.currentPage}
