@@ -46,11 +46,11 @@ export default function SettingsHome() {
       const fd = new FormData();
       fd.append("first_name", formData.first_name);
       fd.append("last_name", formData.last_name);
+      fd.append("email", formData.email);
       if (profileImage) {
         fd.append("avatar", profileImage);
       }
 
-      
       const response = await dashboardApi.updateProfile(fd);
       if (response.status) {
         // Re-fetch profile to get updated avatar URL
@@ -192,8 +192,10 @@ export default function SettingsHome() {
               type="email"
               id="email"
               value={formData.email}
-              disabled
-              className="py-2.5 px-3 border border-[#2B303B] rounded-lg text-gray-400 bg-transparent cursor-not-allowed"
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, email: e.target.value }))
+              }
+              className="py-2.5 px-3 border border-[#2B303B] rounded-lg text-white bg-transparent"
             />
           </div>
           <div className="flex-1" />
