@@ -405,8 +405,8 @@ export const dashboardApi = {
 
   changePassword: async (data: {
     current_password: string;
-    new_password: string;
-    new_password_confirmation: string;
+    password: string;
+    password_confirmation: string;
   }): Promise<ApiResponse<null>> => {
     const response = await axiosClient.put<ApiResponse<null>>(
       "/admin/settings/password",
