@@ -395,7 +395,7 @@ export const dashboardApi = {
 
   updateProfile: async (data: any): Promise<ApiResponse<ProfileData>> => {
     const isFormData = data instanceof FormData;
-    const response = await axiosClient.put<ApiResponse<ProfileData>>(
+    const response = await axiosClient.post<ApiResponse<ProfileData>>(
       "/admin/settings/profile",
       data,
       isFormData ? { headers: { "Content-Type": "multipart/form-data" } } : {},

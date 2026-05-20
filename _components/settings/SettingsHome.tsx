@@ -44,6 +44,7 @@ export default function SettingsHome() {
     setLoading(true);
     try {
       const fd = new FormData();
+      fd.append("_method", "PUT");
       fd.append("first_name", formData.first_name);
       fd.append("last_name", formData.last_name);
       if (profileImage) {
