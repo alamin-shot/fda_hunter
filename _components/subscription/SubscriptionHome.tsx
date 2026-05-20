@@ -112,8 +112,6 @@ export default function SubscriptionHome() {
     }
   };
 
-
-
   // Helper function to format duration display
   const formatDurationDisplay = (duration: string): string => {
     if (!duration || duration === "0") return "lifetime";
@@ -173,7 +171,6 @@ export default function SubscriptionHome() {
     setEditPlanFeatures(plan.features.join(", "));
     setEditPlanPeriod(plan.billing_period);
     setEditModalOpen(true);
-
   };
 
   const handleUpdatePlan = async () => {
@@ -184,9 +181,10 @@ export default function SubscriptionHome() {
     try {
       const response = await dashboardApi.updatePlan(editPlanId!, {
         name: editPlanName.trim(),
-        price: String(editPlanPrice),
-        billing_period: editPlanPeriod,
-        features: editPlanFeatures.split(",").map(f => f.trim()).filter(Boolean),
+        features: editPlanFeatures
+          .split(",")
+          .map((f) => f.trim())
+          .filter(Boolean),
       });
       if (response.status) {
         toast.success("Plan updated!");
@@ -241,20 +239,59 @@ export default function SubscriptionHome() {
     { value: "half_yearly", label: "Half Yearly" },
   ];
 
-
   const statCardsData: StatCardProps[] = overview
     ? [
-      { title: "Total Subscribers", value: overview.total_subscribers, period: "all time", icon: <SubscribersIcon /> },
-      { title: "Monthly Revenue", value: `$${overview.monthly_revenue}`, period: "this month", icon: <MonthlyRevIcon /> },
-      { title: "Avg. Revenue per User", value: `$${overview.avg_revenue_per_user}`, period: "average", icon: <RevPerUserIcon /> },
-      { title: "Churn Rate", value: `${overview.churn_rate}%`, period: "current", icon: <ChurnIcon /> },
-    ]
+        {
+          title: "Total Subscribers",
+          value: overview.total_subscribers,
+          period: "all time",
+          icon: <SubscribersIcon />,
+        },
+        {
+          title: "Monthly Revenue",
+          value: `$${overview.monthly_revenue}`,
+          period: "this month",
+          icon: <MonthlyRevIcon />,
+        },
+        {
+          title: "Avg. Revenue per User",
+          value: `$${overview.avg_revenue_per_user}`,
+          period: "average",
+          icon: <RevPerUserIcon />,
+        },
+        {
+          title: "Churn Rate",
+          value: `${overview.churn_rate}%`,
+          period: "current",
+          icon: <ChurnIcon />,
+        },
+      ]
     : [
-      { title: "Total Subscribers", value: "-", period: "loading...", icon: <SubscribersIcon /> },
-      { title: "Monthly Revenue", value: "-", period: "loading...", icon: <MonthlyRevIcon /> },
-      { title: "Avg. Revenue per User", value: "-", period: "loading...", icon: <RevPerUserIcon /> },
-      { title: "Churn Rate", value: "-", period: "loading...", icon: <ChurnIcon /> },
-    ];
+        {
+          title: "Total Subscribers",
+          value: "-",
+          period: "loading...",
+          icon: <SubscribersIcon />,
+        },
+        {
+          title: "Monthly Revenue",
+          value: "-",
+          period: "loading...",
+          icon: <MonthlyRevIcon />,
+        },
+        {
+          title: "Avg. Revenue per User",
+          value: "-",
+          period: "loading...",
+          icon: <RevPerUserIcon />,
+        },
+        {
+          title: "Churn Rate",
+          value: "-",
+          period: "loading...",
+          icon: <ChurnIcon />,
+        },
+      ];
 
   const handleCreatePlan = async () => {
     if (!planName.trim()) {
@@ -289,12 +326,14 @@ export default function SubscriptionHome() {
         name: planName.trim(),
         price: String(planAmount),
         billing_period: duration,
-        features: planDescription.split(",").map(f => f.trim()).filter(Boolean),
+        features: planDescription
+          .split(",")
+          .map((f) => f.trim())
+          .filter(Boolean),
         stripe_price_id: "price_xxx",
       };
 
-      const response =
-        await dashboardApi.createPlan(requestData);
+      const response = await dashboardApi.createPlan(requestData);
 
       if (response.status) {
         toast.success("Subscription plan created successfully!");
@@ -413,14 +452,24 @@ export default function SubscriptionHome() {
         <div className="border border-[#2B303B] mt-6 rounded-lg overflow-hidden">
           <div className="p-4 flex items-center justify-between bg-[#181B25]">
             <div>
-              <h3 className="text-white text-base font-semibold">{plan.name}</h3>
-              <p className="text-[#A5A5AB] text-sm font-medium mt-1">{plan.description}</p>
+              <h3 className="text-white text-base font-semibold">
+                {plan.name}
+              </h3>
+              <p className="text-[#A5A5AB] text-sm font-medium mt-1">
+                {plan.description}
+              </p>
             </div>
             <div className="flex items-center gap-2">
-              <button className="cursor-pointer hover:bg-white/10 p-1 rounded" onClick={() => handleOpenEdit(plan)}>
+              <button
+                className="cursor-pointer hover:bg-white/10 p-1 rounded"
+                onClick={() => handleOpenEdit(plan)}
+              >
                 <DocumentsIcon />
               </button>
-              <button className="cursor-pointer hover:bg-white/10 p-1 rounded" onClick={() => handleDeletePlan(plan.id, plan.name)}>
+              <button
+                className="cursor-pointer hover:bg-white/10 p-1 rounded"
+                onClick={() => handleDeletePlan(plan.id, plan.name)}
+              >
                 <RedTrashIcon />
               </button>
             </div>
@@ -429,10 +478,14 @@ export default function SubscriptionHome() {
             <div className="text-white">
               <h2 className="text-[32px] font-semibold">
                 ${plan.price}
-                <span className="text-sm text-[#A5A5AB] font-medium ml-1">/{formatDurationDisplay(plan.billing_period)}</span>
+                <span className="text-sm text-[#A5A5AB] font-medium ml-1">
+                  /{formatDurationDisplay(plan.billing_period)}
+                </span>
               </h2>
               <div className="flex items-center gap-4 mt-2">
-                <span className={`text-xs px-2 py-1 rounded ${plan.is_active ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400"}`}>
+                <span
+                  className={`text-xs px-2 py-1 rounded ${plan.is_active ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400"}`}
+                >
                   {plan.is_active ? "Active" : "Inactive"}
                 </span>
                 <span className="text-xs text-[#A5A5AB]">USD</span>
@@ -441,16 +494,24 @@ export default function SubscriptionHome() {
             <ul className="space-y-1">
               {features.slice(0, 3).map((feature, index) => (
                 <li key={index} className="flex items-center gap-2">
-                  <div className="flex-shrink-0"><TikMark /></div>
-                  <p className="text-sm text-[#A5A5AB] font-medium">{feature}</p>
+                  <div className="flex-shrink-0">
+                    <TikMark />
+                  </div>
+                  <p className="text-sm text-[#A5A5AB] font-medium">
+                    {feature}
+                  </p>
                 </li>
               ))}
             </ul>
             <ul className="space-y-1">
               {features.slice(3, 6).map((feature, index) => (
                 <li key={index} className="flex items-center gap-2">
-                  <div className="flex-shrink-0"><TikMark /></div>
-                  <p className="text-sm text-[#A5A5AB] font-medium">{feature}</p>
+                  <div className="flex-shrink-0">
+                    <TikMark />
+                  </div>
+                  <p className="text-sm text-[#A5A5AB] font-medium">
+                    {feature}
+                  </p>
                 </li>
               ))}
             </ul>
@@ -485,10 +546,16 @@ export default function SubscriptionHome() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button className="cursor-pointer hover:bg-white/10 p-1 rounded" onClick={() => handleOpenEdit(plan)}>
+                    <button
+                      className="cursor-pointer hover:bg-white/10 p-1 rounded"
+                      onClick={() => handleOpenEdit(plan)}
+                    >
                       <DocumentsIcon />
                     </button>
-                    <button className="cursor-pointer hover:bg-white/10 p-1 rounded" onClick={() => handleDeletePlan(plan.id, plan.name)}>
+                    <button
+                      className="cursor-pointer hover:bg-white/10 p-1 rounded"
+                      onClick={() => handleDeletePlan(plan.id, plan.name)}
+                    >
                       <RedTrashIcon />
                     </button>
                   </div>
@@ -510,28 +577,35 @@ export default function SubscriptionHome() {
                       {features.length > 0 ? (
                         features.map((feature, index) => (
                           <div key={index} className="flex items-start gap-2">
-                            <div className="mt-1 flex-shrink-0"><TikMark /></div>
-                            <p className="text-sm text-[#A5A5AB] font-medium flex-1">{feature}</p>
+                            <div className="mt-1 flex-shrink-0">
+                              <TikMark />
+                            </div>
+                            <p className="text-sm text-[#A5A5AB] font-medium flex-1">
+                              {feature}
+                            </p>
                           </div>
                         ))
                       ) : (
-                        <p className="text-sm text-[#717784] italic">No features specified</p>
+                        <p className="text-sm text-[#717784] italic">
+                          No features specified
+                        </p>
                       )}
                     </div>
 
                     <div className="flex items-center  gap-2">
-                      <span className={`text-xs px-2 py-1 rounded ${plan.is_active ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400"}`}>
+                      <span
+                        className={`text-xs px-2 py-1 rounded ${plan.is_active ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400"}`}
+                      >
                         {plan.is_active ? "Active" : "Inactive"}
                       </span>
                       <span className="text-xs text-[#A5A5AB]">USD</span>
                     </div>
                   </div>
-
                 </div>
 
-                <button className="w-full mt-auto pt-4 py-2.5 bg-[#00F474] text-[#1D1F2C] font-semibold rounded-lg hover:bg-[#00F474]/90 transition-colors active:scale-[0.98]">
+                {/* <button className="w-full mt-auto pt-4 py-2.5 bg-[#00F474] text-[#1D1F2C] font-semibold rounded-lg hover:bg-[#00F474]/90 transition-colors active:scale-[0.98]">
                   Select Plan
-                </button>
+                </button> */}
               </div>
             </div>
           );
@@ -603,9 +677,12 @@ export default function SubscriptionHome() {
                 <div className="flex items-center gap-2">
                   <Switch
                     className="cursor-pointer"
-                    checked={promo.status === 'active'}
+                    checked={promo.status === "active"}
                     onCheckedChange={() =>
-                      handlePromoCodeToggle(promo.id as unknown as number, promo.status === 'active')
+                      handlePromoCodeToggle(
+                        promo.id as unknown as number,
+                        promo.status === "active",
+                      )
                     }
                   />
                 </div>
@@ -802,7 +879,7 @@ export default function SubscriptionHome() {
                   options={durationOptions}
                   className="w-full"
                   placeholder="Select duration"
-                // disabled={loading}
+                  // disabled={loading}
                 />
               </div>
             </div>
@@ -976,7 +1053,12 @@ export default function SubscriptionHome() {
       >
         <div className="mt-6 mb-8 space-y-5">
           <div>
-            <label htmlFor="edit-plan-name" className="text-white text-sm font-medium">Plan Name*</label>
+            <label
+              htmlFor="edit-plan-name"
+              className="text-white text-sm font-medium"
+            >
+              Plan Name*
+            </label>
             <input
               type="text"
               id="edit-plan-name"
@@ -987,19 +1069,29 @@ export default function SubscriptionHome() {
             />
           </div>
           <div>
-            <label htmlFor="edit-plan-price" className="text-white text-sm font-medium">Price ($)*</label>
+            <label
+              htmlFor="edit-plan-price"
+              className="text-white text-sm font-medium"
+            >
+              Price ($)*
+            </label>
             <input
               type="number"
               id="edit-plan-price"
               value={editPlanPrice}
-              onChange={(e) => setEditPlanPrice(e.target.value)}
-              className="w-full px-3 py-3 text-white rounded-lg border border-[#2B303B] placeholder:text-sm placeholder:text-[#717784] mt-2 bg-[#0E121B] focus:outline-none focus:border-[#00F474] focus:ring-1 focus:ring-[#00F474]/50"
+              readOnly
+              className="w-full px-3 py-3 text-white rounded-lg border border-[#2B303B] placeholder:text-sm placeholder:text-[#717784] mt-2 bg-[#0E121B] focus:outline-none focus:border-[#00F474] focus:ring-1 focus:ring-[#00F474]/50 cursor-not-allowed opacity-60"
               disabled={loading}
             />
           </div>
           <div>
-            <label htmlFor="edit-plan-period" className="text-white text-sm font-medium">Billing Period*</label>
-            <div className="mt-2">
+            <label
+              htmlFor="edit-plan-period"
+              className="text-white text-sm font-medium"
+            >
+              Billing Period*
+            </label>
+            <div className="mt-2 opacity-60 pointer-events-none">
               <CustomDropdown
                 value={editPlanPeriod}
                 onChange={setEditPlanPeriod}
@@ -1010,7 +1102,12 @@ export default function SubscriptionHome() {
             </div>
           </div>
           <div>
-            <label htmlFor="edit-plan-features" className="text-white text-sm font-medium">Features (comma separated)</label>
+            <label
+              htmlFor="edit-plan-features"
+              className="text-white text-sm font-medium"
+            >
+              Features (comma separated)
+            </label>
             <textarea
               id="edit-plan-features"
               value={editPlanFeatures}
@@ -1033,7 +1130,14 @@ export default function SubscriptionHome() {
             onClick={handleUpdatePlan}
             disabled={loading}
           >
-            {loading ? <><div className="w-4 h-4 border-2 border-[#1D1F2C] border-t-transparent rounded-full animate-spin"></div> Updating...</> : "Update Plan"}
+            {loading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-[#1D1F2C] border-t-transparent rounded-full animate-spin"></div>{" "}
+                Updating...
+              </>
+            ) : (
+              "Update Plan"
+            )}
           </button>
         </div>
       </CustomModal>

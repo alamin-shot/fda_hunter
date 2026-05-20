@@ -77,6 +77,14 @@ export default function UsersHome() {
       if (searchTerm) {
         params.search = searchTerm;
       }
+      if (statusFilter && statusFilter !== "all") {
+        params.status = statusFilter;
+      }
+      if (promoCodeFilter === "used") {
+        params.used_promo = "true";
+      } else if (promoCodeFilter === "unused") {
+        params.used_promo = "false";
+      }
 
       const response = await dashboardApi.getUsers(params);
       if (response.status) {

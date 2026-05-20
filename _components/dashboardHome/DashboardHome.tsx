@@ -13,7 +13,7 @@ import ConfidenceVsOutcomeChart from "../charts/ConfidenceVsOutcomeChart";
 import TotalWinRateGauge from "../charts/TotalWinRateGauge";
 import {
   dashboardApi,
-  PredictionsOverview,
+  DashboardOverview,
   Prediction,
 } from "@/services/dashboardApi";
 
@@ -29,7 +29,7 @@ export default function DashboardHome() {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [overview, setOverview] = useState<PredictionsOverview | null>(null);
+  const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [allPredictions, setAllPredictions] = useState<Prediction[]>([]); // For charts
   const [predictionsLoading, setPredictionsLoading] = useState(true);
@@ -50,7 +50,7 @@ export default function DashboardHome() {
     const fetchOverview = async () => {
       try {
         setLoading(true);
-        const response = await dashboardApi.getPredictionsOverview();
+        const response = await dashboardApi.getDashboardOverview();
         if (response.status) {
           setOverview(response.data);
           setError(null);
@@ -58,7 +58,7 @@ export default function DashboardHome() {
           setError(response.message);
         }
       } catch (err: any) {
-        console.error("Error fetching predictions overview:", err);
+        console.error("Error fetching dashboard overview:", err);
         setError(err.message || "Failed to load dashboard statistics");
       } finally {
         setLoading(false);
@@ -92,6 +92,7 @@ export default function DashboardHome() {
       const response = await dashboardApi.getPredictions({
         page,
         per_page: limit,
+        search: search || undefined,
       });
 
       if (response.status) {
@@ -185,7 +186,10 @@ export default function DashboardHome() {
 
   // Compute bar chart data (monthly confidence vs actual)
   const barChartData = useMemo(() => {
-    const monthMap: Record<string, { confidenceSum: number; count: number; wins: number; total: number }> = {};
+    const monthMap: Record<
+      string,
+      { confidenceSum: number; count: number; wins: number; total: number }
+    > = {};
 
     allPredictions.forEach((p) => {
       const date = new Date(p.scheduled_at);
@@ -204,7 +208,20 @@ export default function DashboardHome() {
     });
 
     // Get last 6 months in order
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
     const currentMonth = new Date().getMonth();
     const last6Months: string[] = [];
     for (let i = 5; i >= 0; i--) {
@@ -217,9 +234,10 @@ export default function DashboardHome() {
       confidence: monthMap[month]
         ? Math.round(monthMap[month].confidenceSum / monthMap[month].count)
         : 0,
-      actual: monthMap[month] && monthMap[month].total > 0
-        ? Math.round((monthMap[month].wins / monthMap[month].total) * 100)
-        : 0,
+      actual:
+        monthMap[month] && monthMap[month].total > 0
+          ? Math.round((monthMap[month].wins / monthMap[month].total) * 100)
+          : 0,
     }));
   }, [allPredictions]);
 
@@ -227,21 +245,62 @@ export default function DashboardHome() {
   const statCardsData: StatCardProps[] = useMemo(() => {
     if (!overview) {
       return [
-        { title: "Overall Win Rate", value: loading ? "Loading..." : "0%", period: "vs last month", icon: <WinRateIcon /> },
-        { title: "Active Predictions", value: loading ? "Loading..." : 0, period: "vs last month", icon: <StaticsIcon /> },
-        { title: "Total Records", value: loading ? "Loading..." : "0", period: "vs last month", icon: <WalletIcon /> },
-        { title: "Total Win", value: loading ? "Loading..." : "$0", period: "vs last month", icon: <UsersIcon /> },
+        {
+          title: "Overall Win Rate",
+          value: loading ? "Loading..." : "0%",
+          period: "vs last month",
+          icon: <WinRateIcon />,
+        },
+        {
+          title: "Active Predictions",
+          value: loading ? "Loading..." : 0,
+          period: "vs last month",
+          icon: <StaticsIcon />,
+        },
+        {
+          title: "Total Records",
+          value: loading ? "Loading..." : "0",
+          period: "vs last month",
+          icon: <WalletIcon />,
+        },
+        {
+          title: "Total Win",
+          value: loading ? "Loading..." : "$0",
+          period: "vs last month",
+          icon: <UsersIcon />,
+        },
       ];
     }
 
-    const formatNumber = (value: number) => new Intl.NumberFormat("en-US").format(value);
+    const formatNumber = (value: number) =>
+      new Intl.NumberFormat("en-US").format(value);
     const formatPercentage = (value: number) => `${value.toFixed(2)}%`;
 
     return [
-      { title: "Overall Win Rate", value: formatPercentage(overview.overall_win_rate), period: "average", icon: <WinRateIcon /> },
-      { title: "Active Predictions", value: formatNumber(overview.active_predictions), period: "currently active", icon: <StaticsIcon /> },
-      { title: "Total Records", value: formatNumber(overview.total_records), period: "total", icon: <WalletIcon /> },
-      { title: "Total Win", value: formatNumber(overview.total_win), period: "wins", icon: <UsersIcon /> },
+      {
+        title: "Overall Win Rate",
+        value: formatPercentage(overview.overall_win_rate),
+        period: "average",
+        icon: <WinRateIcon />,
+      },
+      {
+        title: "Active Predictions",
+        value: formatNumber(overview.active_predictions),
+        period: "currently active",
+        icon: <StaticsIcon />,
+      },
+      {
+        title: "Total Records",
+        value: formatNumber(overview.total_subscribers),
+        period: "total",
+        icon: <WalletIcon />,
+      },
+      {
+        title: "Total Win",
+        value: formatNumber(overview.monthly_revenue),
+        period: "wins",
+        icon: <UsersIcon />,
+      },
     ];
   }, [overview, loading]);
 
@@ -265,13 +324,22 @@ export default function DashboardHome() {
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
           {statCardsData.map((card, index) => (
-            <div className="p-3 relative border border-[#2B303B] rounded-xl overflow-hidden" key={index}>
+            <div
+              className="p-3 relative border border-[#2B303B] rounded-xl overflow-hidden"
+              key={index}
+            >
               <div className="flex items-center gap-2">
                 <div className="bg-[#181B25] p-2 rounded-xl">{card.icon}</div>
-                <h3 className="text-white text-base font-medium">{card.title}</h3>
+                <h3 className="text-white text-base font-medium">
+                  {card.title}
+                </h3>
               </div>
-              <h2 className="text-white text-2xl font-medium my-3">{card.value}</h2>
-              <p className="text-sm font-medium text-[#687588]">{card.period}</p>
+              <h2 className="text-white text-2xl font-medium my-3">
+                {card.value}
+              </h2>
+              <p className="text-sm font-medium text-[#687588]">
+                {card.period}
+              </p>
               {loading && !overview && (
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer" />
               )}
@@ -288,7 +356,10 @@ export default function DashboardHome() {
               <ConfidenceVsOutcomeChart data={barChartData} />
             </div>
             <div className="w-full lg:w-[30%] flex flex-col">
-              <TotalWinRateGauge data={gaugeData} overallWinRate={overallWinRate} />
+              <TotalWinRateGauge
+                data={gaugeData}
+                overallWinRate={overallWinRate}
+              />
             </div>
           </>
         ) : (
@@ -313,7 +384,12 @@ export default function DashboardHome() {
       <div className="bg-[#0E121B] mt-4.5 p-6 rounded-2xl">
         <div className="flex justify-between items-center">
           <h2 className="text-xl text-white font-bold">Recent Predictions</h2>
-          <SearchBar value={search} onChange={setSearch} className="max-w-md" placeholder="Search Picks" />
+          <SearchBar
+            value={search}
+            onChange={setSearch}
+            className="max-w-md"
+            placeholder="Search Picks"
+          />
         </div>
 
         <div className="mt-6">

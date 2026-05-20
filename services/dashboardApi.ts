@@ -27,6 +27,13 @@ export interface Category {
   is_active: boolean;
 }
 
+export interface DashboardOverview {
+  overall_win_rate: number;
+  total_subscribers: number;
+  active_predictions: number;
+  monthly_revenue: number;
+}
+
 // Prediction
 export interface Prediction {
   id: number;
@@ -175,8 +182,9 @@ export interface NotificationSetting {
 export interface PredictionsParams {
   page?: number;
   per_page?: number;
+  search?: string;
   status?: string;
-  category?: number;
+  category?: string;
 }
 
 export interface UsersParams {
@@ -184,11 +192,19 @@ export interface UsersParams {
   per_page?: number;
   search?: string;
   status?: string;
+  used_promo?: string;
 }
 
 // ============ DASHBOARD API ============
 export const dashboardApi = {
   // ========== PREDICTIONS ==========
+
+  getDashboardOverview: async (): Promise<ApiResponse<DashboardOverview>> => {
+    const response = await axiosClient.get<ApiResponse<DashboardOverview>>(
+      "/admin/dashboard/overview",
+    );
+    return response.data;
+  },
 
   getPredictionsOverview: async (): Promise<
     ApiResponse<PredictionsOverview>
@@ -244,10 +260,13 @@ export const dashboardApi = {
     return response.data;
   },
 
-  updatePredictionStatus: async (id: number, status: string): Promise<ApiResponse<Prediction>> => {
+  updatePredictionStatus: async (
+    id: number,
+    status: string,
+  ): Promise<ApiResponse<Prediction>> => {
     const response = await axiosClient.patch<ApiResponse<Prediction>>(
       `/admin/predictions/${id}/status`,
-      { status }
+      { status },
     );
     return response.data;
   },
@@ -379,7 +398,7 @@ export const dashboardApi = {
     const response = await axiosClient.put<ApiResponse<ProfileData>>(
       "/admin/settings/profile",
       data,
-      isFormData ? { headers: { "Content-Type": "multipart/form-data" } } : {}
+      isFormData ? { headers: { "Content-Type": "multipart/form-data" } } : {},
     );
     return response.data;
   },

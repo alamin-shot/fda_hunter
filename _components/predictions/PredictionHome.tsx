@@ -57,9 +57,9 @@ export default function Prediction() {
   const [error, setError] = useState<string | null>(null);
 
   // Category options from API
-  const [categoriesOption, setCategoriesOption] = useState<CategoryOption[]>([
-    { value: "Casino", label: "Casino" },
+  const [categoriesOption] = useState<CategoryOption[]>([
     { value: "Sports", label: "Sports" },
+    { value: "Casino", label: "Casino" },
     { value: "Stocks", label: "Stocks" },
     { value: "Crypto", label: "Crypto" },
   ]);
@@ -121,7 +121,7 @@ export default function Prediction() {
         params.status = statusFilter;
       }
       if (categories) {
-        params.category = Number(categories);
+        params.category = categories; 
       }
 
       const response = await dashboardApi.getPredictions(params);
@@ -362,9 +362,15 @@ export default function Prediction() {
     // Refresh dashboard stats
     handleRefreshStats();
   };
-  const handleStatusChange = async (prediction: Prediction, newStatus: string) => {
+  const handleStatusChange = async (
+    prediction: Prediction,
+    newStatus: string,
+  ) => {
     try {
-      const response = await dashboardApi.updatePredictionStatus(prediction.id, newStatus);
+      const response = await dashboardApi.updatePredictionStatus(
+        prediction.id,
+        newStatus,
+      );
       if (response.status) {
         toast.success(`Status updated to ${newStatus}`);
         fetchPredictions(pagination.currentPage, pagination.itemsPerPage);
@@ -373,7 +379,9 @@ export default function Prediction() {
         toast.error(response.message || "Failed to update status");
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.message || err.message || "Failed to update status");
+      toast.error(
+        err.response?.data?.message || err.message || "Failed to update status",
+      );
     }
   };
 
@@ -417,12 +425,13 @@ export default function Prediction() {
                 {!card.isLoading && card.value}
               </h2>
               <p
-                className={`text-sm font-medium ${card.status === "up"
-                  ? "text-green-400"
-                  : card.status === "down"
-                    ? "text-red-400"
-                    : "text-[#687588]"
-                  }`}
+                className={`text-sm font-medium ${
+                  card.status === "up"
+                    ? "text-green-400"
+                    : card.status === "down"
+                      ? "text-red-400"
+                      : "text-[#687588]"
+                }`}
               >
                 {card.period}
               </p>
@@ -451,7 +460,7 @@ export default function Prediction() {
 
         <div className="mt-5 flex flex-col lg:flex-row items-center w-full gap-3.5">
           <SearchBar
-            placeholder="Search Picks"
+            placeholder="Search Title"
             value={searchTerm}
             onChange={setSearchTerm}
             className="flex-1"
@@ -501,7 +510,11 @@ export default function Prediction() {
           ) : predictions.length > 0 ? (
             <>
               <DynamicTable
-                columns={RecentPredictionColumn(handleEditClick, handleDeleteClick, handleStatusChange)}
+                columns={RecentPredictionColumn(
+                  handleEditClick,
+                  handleDeleteClick,
+                  handleStatusChange,
+                )}
                 data={predictions}
                 hasWrapperBorder={false}
                 headerStyles={{
