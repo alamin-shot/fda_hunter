@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import ToastProvider from "@/_components/ToasterProvider";
-import { AdminRoute } from "@/_components/PrivateRoute";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,12 +31,9 @@ export default function RootLayout({
       >
         {/* include auth provider */}
         <AuthProvider>
-      
-        <ToastProvider/>
-        {children}
-       
+          <ToastProvider />
+          {children}
         </AuthProvider>
-
       </body>
     </html>
   );
