@@ -50,6 +50,8 @@ export default function SettingsHome() {
       if (profileImage) {
         fd.append("avatar", profileImage);
       }
+
+      
       const response = await dashboardApi.updateProfile(fd);
       if (response.status) {
         // Re-fetch profile to get updated avatar URL
