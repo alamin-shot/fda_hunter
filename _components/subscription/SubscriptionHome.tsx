@@ -153,15 +153,21 @@ export default function SubscriptionHome() {
   };
 
   // Helper function to handle switch toggle
-  const handlePromoCodeToggle = async (id: number, isActive: boolean) => {
+  const handlePromoCodeToggle = async (id: number) => {
     try {
-      // Note: You may need to create an update endpoint for promo codes
-      // For now, we'll just log it
-      console.log(`Toggle promo code ${id} to ${!isActive}`);
-      toast.success(`Promo code ${isActive ? "deactivated" : "activated"}`);
-    } catch (error) {
-      console.error("Error toggling promo code:", error);
-      toast.error("Failed to update promo code status");
+      const response = await dashboardApi.togglePromoCode(id);
+      if (response.status) {
+        toast.success(
+          `Promo code ${response.data.status === "active" ? "activated" : "deactivated"}`,
+        );
+        fetchPromoCodes(); // Refresh the list
+      } else {
+        toast.error(response.message || "Failed to toggle promo code");
+      }
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || "Failed to toggle promo code",
+      );
     }
   };
   const handleOpenEdit = (plan: SubscriptionPlan) => {
@@ -678,12 +684,7 @@ export default function SubscriptionHome() {
                   <Switch
                     className="cursor-pointer"
                     checked={promo.status === "active"}
-                    onCheckedChange={() =>
-                      handlePromoCodeToggle(
-                        promo.id as unknown as number,
-                        promo.status === "active",
-                      )
-                    }
+                    onCheckedChange={() => handlePromoCodeToggle(promo.id)}
                   />
                 </div>
               </li>
