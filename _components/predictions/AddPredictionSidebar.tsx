@@ -35,13 +35,7 @@ const AddPredictionSidebar: React.FC<AddPredictionSidebarProps> = ({
     { value: "4", label: "Crypto" },
   ];
 
-  const signalOptions = [
-    { value: "home_win", label: "Home Win" },
-    { value: "away_win", label: "Away Win" },
-    { value: "over", label: "Over" },
-    { value: "under", label: "Under" },
-    { value: "draw", label: "Draw" },
-  ];
+  
 
   useEffect(() => {
     if (isOpen && !isVisible) {
@@ -179,7 +173,8 @@ const AddPredictionSidebar: React.FC<AddPredictionSidebarProps> = ({
 
           <div>
             <label className="text-white text-sm font-medium">Signal *</label>
-            <CustomDropdown options={signalOptions} value={signal} onChange={setSignal} placeholder="Select signal" className="w-full mt-2" />
+            <input type="text" value={signal} onChange={(e) => setSignal(e.target.value)}
+              className="w-full mt-2 border border-[#2B303B] rounded-lg p-2 bg-[#0E121B] text-white focus:ring-1 focus:border-[#00f474] focus:outline-none" placeholder="e.g. Home Win, Over, etc." disabled={loading} />
           </div>
 
           <div>
