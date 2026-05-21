@@ -194,7 +194,12 @@ export interface UsersParams {
   status?: string;
   used_promo?: string;
 }
-
+export interface Category {
+  id: number;
+  name: string;
+  win_rate: string | null;
+  is_active: boolean;
+}
 // ============ DASHBOARD API ============
 export const dashboardApi = {
   // ========== PREDICTIONS ==========
@@ -428,6 +433,29 @@ export const dashboardApi = {
     const response = await axiosClient.put<ApiResponse<any>>(
       "/admin/settings/notifications",
       data,
+    );
+    return response.data;
+  },
+  getCategories: async (): Promise<ApiResponse<Category[]>> => {
+    const response =
+      await axiosClient.get<ApiResponse<Category[]>>("/admin/categories");
+    return response.data;
+  },
+
+  createCategory: async (data: {
+    name: string;
+    is_active?: boolean;
+  }): Promise<ApiResponse<Category>> => {
+    const response = await axiosClient.post<ApiResponse<Category>>(
+      "/admin/categories",
+      data,
+    );
+    return response.data;
+  },
+
+  deleteCategory: async (id: number): Promise<ApiResponse<null>> => {
+    const response = await axiosClient.delete<ApiResponse<null>>(
+      `/admin/categories/${id}`,
     );
     return response.data;
   },

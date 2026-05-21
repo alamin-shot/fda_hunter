@@ -17,6 +17,7 @@ import type { Prediction } from "@/services/dashboardApi";
 import EditPredictionModal from "./EditPredictionModal";
 import toast from "react-hot-toast";
 import ConfirmModal from "../reusable/ConfirmModal";
+import CategoryDropdown from "../reusable/CategoryDropdown";
 
 interface StatCardProps {
   title: string;
@@ -25,11 +26,6 @@ interface StatCardProps {
   icon: React.ReactNode;
   status?: "up" | "down";
   isLoading?: boolean;
-}
-
-interface CategoryOption {
-  value: string;
-  label: string;
 }
 
 export default function Prediction() {
@@ -57,14 +53,6 @@ export default function Prediction() {
   const [overview, setOverview] = useState<PredictionsOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Category options from API
-  const [categoriesOption] = useState<CategoryOption[]>([
-    { value: "Sports", label: "Sports" },
-    { value: "Casino", label: "Casino" },
-    { value: "Stocks", label: "Stocks" },
-    { value: "Crypto", label: "Crypto" },
-  ]);
 
   // Status options based on API response
   const statusOptions = [
@@ -471,8 +459,7 @@ export default function Prediction() {
             onChange={setSearchTerm}
             className="flex-1"
           />
-          <CustomDropdown
-            options={categoriesOption}
+          <CategoryDropdown
             value={categories}
             onChange={setSelectedCategories}
             placeholder="Select categories"
@@ -501,8 +488,7 @@ export default function Prediction() {
               <p className="text-red-400 text-sm">{predictionsError}</p>
               {predictionsError.includes("Invalid category") && (
                 <p className="text-yellow-400 text-sm mt-1">
-                  Available categories:{" "}
-                  {categoriesOption.map((c) => c.label).join(", ")}
+                  Please select a valid category from the dropdown.
                 </p>
               )}
             </div>
