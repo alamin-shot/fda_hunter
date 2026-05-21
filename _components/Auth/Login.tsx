@@ -264,9 +264,7 @@ export default function LoginForm() {
               </div>
               <button
                 type="button"
-                onClick={() =>
-                  toast.error("Forgot password feature coming soon!")
-                }
+                onClick={() => router.push("/forgot-password")}
                 className="text-sm font-medium text-green-400 hover:text-green-300 transition-colors disabled:opacity-50 cursor-pointer"
                 disabled={isLoading}
               >
