@@ -16,6 +16,7 @@ interface CategoryDropdownProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  useId?: boolean;
 }
 
 export default function CategoryDropdown({
@@ -23,6 +24,7 @@ export default function CategoryDropdown({
   onChange,
   placeholder = "Select categories",
   className = "",
+  useId = false,
 }: CategoryDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
@@ -39,7 +41,7 @@ export default function CategoryDropdown({
       if (response.status) {
         setCategories(
           response.data.map((c) => ({
-            value: c.name,
+            value: useId ? String(c.id) : c.name,
             label: c.name,
             id: c.id,
           })),
@@ -74,19 +76,52 @@ export default function CategoryDropdown({
 
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
-    if (!confirm("Delete this category?")) return;
-    try {
-      const response = await dashboardApi.deleteCategory(id);
-      if (response.status) {
-        toast.success("Category deleted");
-        fetchCategories();
-        if (categories.find((c) => c.id === id)?.value === value) {
-          onChange("");
-        }
-      }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to delete");
-    }
+
+    toast(
+      (t) => (
+        <div className="flex flex-col gap-3">
+          <p className="text-white font-medium">Delete this category?</p>
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={async () => {
+                toast.dismiss(t.id);
+                try {
+                  const response = await dashboardApi.deleteCategory(id);
+                  if (response.status) {
+                    toast.success("Category deleted");
+                    fetchCategories();
+                    if (categories.find((c) => c.id === id)?.value === value) {
+                      onChange("");
+                    }
+                  }
+                } catch (error: any) {
+                  toast.error(
+                    error.response?.data?.message || "Failed to delete",
+                  );
+                }
+              }}
+              className="px-3 py-1.5 text-sm bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded"
+            >
+              Delete
+            </button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="px-3 py-1.5 text-sm bg-[#00F474]/20 text-[#00F474] hover:bg-[#00F474]/30 rounded"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        duration: 10000,
+        style: {
+          background: "#1A1F2E",
+          color: "#fff",
+          border: "1px solid #323B49",
+        },
+      },
+    );
   };
 
   const handleAdd = async () => {

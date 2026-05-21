@@ -18,7 +18,6 @@ import EditPredictionModal from "./EditPredictionModal";
 import toast from "react-hot-toast";
 import ConfirmModal from "../reusable/ConfirmModal";
 import CategoryDropdown from "../reusable/CategoryDropdown";
-
 interface StatCardProps {
   title: string;
   value: string | number;

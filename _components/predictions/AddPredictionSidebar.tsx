@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
+import CategoryDropdown from "../reusable/CategoryDropdown";
 
 interface AddPredictionSidebarProps {
   isOpen?: boolean;
@@ -171,8 +172,7 @@ const AddPredictionSidebar: React.FC<AddPredictionSidebarProps> = ({
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           <div>
             <label className="text-white text-sm font-medium">Category *</label>
-            <CustomDropdown
-              options={categoriesOption}
+            <CategoryDropdown
               value={categoryId}
               onChange={setCategoryId}
               placeholder="Select category"
