@@ -58,26 +58,11 @@ export default function LoginForm() {
       const response = await login(formData);
 
       if (response.status) {
-        toast.success("Login successful! Redirecting...", {
-          duration: 2000,
-        });
-
         setTimeout(() => {
           router.push("/dashboard");
         }, 1500);
-      } else {
-        toast.error(response.message || "Login failed. Please try again.");
       }
     } catch (error: any) {
-      console.error("Login form error:", error);
-
-      let errorMessage = "Login failed. Please try again.";
-
-      if (error.message) {
-        errorMessage = error.message;
-      }
-
-      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

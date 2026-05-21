@@ -13,13 +13,18 @@ import RedTrashIcon from "../icons/subscription/RedTrashIcon";
 import TikMark from "../icons/subscription/TikMark";
 import { Switch } from "@/components/ui/switch";
 import CustomDropdown from "../reusable/CustomDropdown";
-
+import { Calendar } from "@/components/ui/calendar";
+import { PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import {
   dashboardApi,
   SubscriptionPlan,
   SubscriptionOverview,
   PromoCode,
 } from "@/services/dashboardApi";
+import ConfirmModal from "../reusable/ConfirmModal";
+import { Popover, PopoverContent } from "@/components/ui/popover";
 
 interface StatCardProps {
   title: string;
@@ -40,7 +45,12 @@ export default function SubscriptionHome() {
     SubscriptionPlan[]
   >([]);
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
-
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    id: number;
+    name: string;
+    type: "plan" | "promo";
+  } | null>(null);
   // Form states
   const [planName, setPlanName] = useState("");
   const [planTitle, setPlanTitle] = useState("");
@@ -203,39 +213,37 @@ export default function SubscriptionHome() {
       setLoading(false);
     }
   };
-  const handleDeletePlan = async (id: number, name: string) => {
-    if (!confirm(`Delete plan "${name}"?`)) return;
-    try {
-      const response = await dashboardApi.deletePlan(id);
-      if (response.status) {
-        toast.success("Plan deleted!");
-        fetchSubscriptionPackages();
-      } else {
-        toast.error(response.message || "Failed to delete plan");
-      }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete plan");
-    }
+  const handleDeletePlan = (id: number, name: string) => {
+    setDeleteTarget({ id, name, type: "plan" });
+    setDeleteModalOpen(true);
   };
 
   // Handle delete promo code
-  const handleDeletePromoCode = async (id: number, code: string) => {
-    if (!confirm(`Are you sure you want to delete promo code "${code}"?`)) {
-      return;
-    }
-
+  const handleDeletePromoCode = (id: number, code: string) => {
+    setDeleteTarget({ id, name: code, type: "promo" });
+    setDeleteModalOpen(true);
+  };
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      const response = await dashboardApi.deletePromoCode(id);
-      if (response.status) {
-        toast.success("Promo code deleted successfully!");
-        // Refresh the promo codes list
-        await fetchPromoCodes();
+      if (deleteTarget.type === "plan") {
+        const response = await dashboardApi.deletePlan(deleteTarget.id);
+        if (response.status) {
+          toast.success("Plan deleted!");
+          fetchSubscriptionPackages();
+        }
       } else {
-        toast.error(response.message || "Failed to delete promo code");
+        const response = await dashboardApi.deletePromoCode(deleteTarget.id);
+        if (response.status) {
+          toast.success("Promo code deleted successfully!");
+          fetchPromoCodes();
+        }
       }
     } catch (error: any) {
-      console.error("Error deleting promo code:", error);
-      toast.error(error.message || "Failed to delete promo code");
+      toast.error(error.message || "Failed to delete");
+    } finally {
+      setDeleteModalOpen(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -1009,14 +1017,36 @@ export default function SubscriptionHome() {
             >
               Expiry Date (Optional)
             </label>
-            <input
-              type="date"
-              id="expiry-date"
-              value={promoExpiryDate}
-              onChange={(e) => setPromoExpiryDate(e.target.value)}
-              className="w-full px-3 py-3 text-white rounded-lg border border-[#2B303B] placeholder:text-sm placeholder:text-[#717784] placeholder:font-medium mt-2 bg-[#0E121B] focus:outline-none focus:border-[#00F474] focus:ring-1 focus:ring-[#00F474]/50"
-              disabled={creatingPromoCode}
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className="w-full px-3 py-3 text-white rounded-lg border border-[#2B303B] mt-2 bg-[#0E121B] text-left flex items-center gap-2 hover:border-[#00f474] transition-colors"
+                  disabled={creatingPromoCode}
+                >
+                  <CalendarIcon className="w-4 h-4 text-gray-400" />
+                  {promoExpiryDate ? (
+                    <span>{format(new Date(promoExpiryDate), "PPP")}</span>
+                  ) : (
+                    <span className="text-gray-500">Pick an expiry date</span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 bg-[#1A1F2E] border-[#323B49]">
+                <Calendar
+                  mode="single"
+                  selected={
+                    promoExpiryDate ? new Date(promoExpiryDate) : undefined
+                  }
+                  onSelect={(date) => {
+                    if (date) {
+                      setPromoExpiryDate(format(date, "yyyy-MM-dd"));
+                    }
+                  }}
+                  className="bg-[#1A1F2E] text-white"
+                  disabled={(date) => date < new Date()}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
@@ -1142,6 +1172,16 @@ export default function SubscriptionHome() {
           </button>
         </div>
       </CustomModal>
+      <ConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setDeleteTarget(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title={`Delete ${deleteTarget?.type === "plan" ? "Plan" : "Promo Code"}`}
+        message={`Are you sure you want to delete "${deleteTarget?.name}"?`}
+      />
     </div>
   );
 }

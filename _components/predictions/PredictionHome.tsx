@@ -16,6 +16,7 @@ import { dashboardApi, PredictionsOverview } from "@/services/dashboardApi";
 import type { Prediction } from "@/services/dashboardApi";
 import EditPredictionModal from "./EditPredictionModal";
 import toast from "react-hot-toast";
+import ConfirmModal from "../reusable/ConfirmModal";
 
 interface StatCardProps {
   title: string;
@@ -50,7 +51,8 @@ export default function Prediction() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedPrediction, setSelectedPrediction] =
     useState<Prediction | null>(null);
-
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Prediction | null>(null);
   // Dashboard stats state
   const [overview, setOverview] = useState<PredictionsOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -121,7 +123,7 @@ export default function Prediction() {
         params.status = statusFilter;
       }
       if (categories) {
-        params.category = categories; 
+        params.category = categories;
       }
 
       const response = await dashboardApi.getPredictions(params);
@@ -201,21 +203,9 @@ export default function Prediction() {
   const handleItemsPerPageChange = (newItemsPerPage: number) => {
     fetchPredictions(1, newItemsPerPage);
   };
-  const handleDeleteClick = async (prediction: Prediction) => {
-    if (!confirm(`Delete prediction "${prediction.title}"?`)) return;
-
-    try {
-      const response = await dashboardApi.deletePrediction(prediction.id);
-      if (response.status) {
-        toast.success("Prediction deleted successfully!");
-        fetchPredictions(pagination.currentPage, pagination.itemsPerPage);
-        handleRefreshStats();
-      } else {
-        toast.error(response.message || "Failed to delete prediction");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to delete prediction");
-    }
+  const handleDeleteClick = (prediction: Prediction) => {
+    setDeleteTarget(prediction);
+    setDeleteModalOpen(true);
   };
 
   // Clear all filters
@@ -224,6 +214,22 @@ export default function Prediction() {
     setSelectedCategories("");
     setStatusFilter("");
     fetchPredictions(1, pagination.itemsPerPage);
+  };
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      const response = await dashboardApi.deletePrediction(deleteTarget.id);
+      if (response.status) {
+        toast.success("Prediction deleted successfully!");
+        fetchPredictions(pagination.currentPage, pagination.itemsPerPage);
+        handleRefreshStats();
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete prediction");
+    } finally {
+      setDeleteModalOpen(false);
+      setDeleteTarget(null);
+    }
   };
 
   // Format percentage
@@ -578,6 +584,17 @@ export default function Prediction() {
         onClose={() => setIsEditModalOpen(false)}
         prediction={selectedPrediction}
         onSuccess={handleEditSuccess}
+      />
+
+      <ConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setDeleteTarget(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Delete Prediction"
+        message={`Are you sure you want to delete the prediction "${deleteTarget?.title}"?`}
       />
     </div>
   );
