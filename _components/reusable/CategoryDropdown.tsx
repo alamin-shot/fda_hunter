@@ -40,11 +40,13 @@ export default function CategoryDropdown({
       const response = await dashboardApi.getCategories();
       if (response.status) {
         setCategories(
-          response.data.map((c) => ({
-            value: useId ? String(c.id) : c.name,
-            label: c.name,
-            id: c.id,
-          })),
+          response.data
+            .filter((c) => c && c.name) // Filter out null/undefined
+            .map((c) => ({
+              value: useId ? String(c.id) : c.name,
+              label: c.name,
+              id: c.id,
+            })),
         );
       }
     } catch {}
@@ -144,7 +146,7 @@ export default function CategoryDropdown({
     }
   };
 
-  const selectedOption = categories.find((c) => c.value === value);
+  const selectedOption = categories.find((c) => c && c.value === value);
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
