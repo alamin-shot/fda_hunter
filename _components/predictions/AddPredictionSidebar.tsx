@@ -37,13 +37,6 @@ const AddPredictionSidebar: React.FC<AddPredictionSidebarProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const categoriesOption = [
-    { value: "1", label: "Sports" },
-    { value: "2", label: "Casino" },
-    { value: "3", label: "Stocks" },
-    { value: "4", label: "Crypto" },
-  ];
-
   useEffect(() => {
     if (isOpen && !isVisible) {
       setIsVisible(true);
@@ -173,6 +166,7 @@ const AddPredictionSidebar: React.FC<AddPredictionSidebarProps> = ({
           <div>
             <label className="text-white text-sm font-medium">Category *</label>
             <CategoryDropdown
+              useId={true}
               value={categoryId}
               onChange={setCategoryId}
               placeholder="Select category"
@@ -240,6 +234,9 @@ const AddPredictionSidebar: React.FC<AddPredictionSidebarProps> = ({
                       setScheduledAt(date.toISOString().slice(0, 16));
                     }
                   }}
+                  disabled={(date) =>
+                    date < new Date(new Date().setHours(0, 0, 0, 0))
+                  }
                   className="bg-[#1A1F2E] text-white"
                 />
               </PopoverContent>

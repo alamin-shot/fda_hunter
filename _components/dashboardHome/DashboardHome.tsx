@@ -154,6 +154,7 @@ export default function DashboardHome() {
     const categories: Record<string, { total: number; wins: number }> = {};
 
     allPredictions.forEach((p) => {
+      if (!p.category?.name) return;
       const name = p.category.name;
       if (!categories[name]) {
         categories[name] = { total: 0, wins: 0 };
@@ -192,6 +193,7 @@ export default function DashboardHome() {
     > = {};
 
     allPredictions.forEach((p) => {
+      if (!p.scheduled_at) return; // Skip null dates
       const date = new Date(p.scheduled_at);
       const monthKey = date.toLocaleString("en-US", { month: "short" });
 
@@ -290,15 +292,15 @@ export default function DashboardHome() {
         icon: <StaticsIcon />,
       },
       {
-        title: "Total Records",
+        title: "Total Subscribers",
         value: formatNumber(overview.total_subscribers),
-        period: "total",
+        period: "all time",
         icon: <WalletIcon />,
       },
       {
-        title: "Total Win",
-        value: formatNumber(overview.monthly_revenue),
-        period: "wins",
+        title: "Monthly Revenue",
+        value: `$${overview.monthly_revenue}`,
+        period: "this month",
         icon: <UsersIcon />,
       },
     ];
