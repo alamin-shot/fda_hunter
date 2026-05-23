@@ -1031,7 +1031,7 @@ export default function SubscriptionHome() {
                   )}
                 </button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 bg-[#1A1F2E] border-[#323B49]">
+              <PopoverContent className="w-auto p-0 bg-[#1A1F2E] border-[#323B49] z-999">
                 <Calendar
                   mode="single"
                   selected={
