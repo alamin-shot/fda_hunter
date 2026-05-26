@@ -152,7 +152,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* Header */}
         <div className="flex items-center justify-between py-5 px-6 border-b border-[#323B49]">
           {/* Logo */}
-          <div className="flex items-center">
+          <div className="flex">
             <Link
               href="/dashboard"
               className="cursor-pointer"
@@ -163,11 +163,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 alt="Logo"
                 width={36}
                 height={36}
-                className="mr-2"
+                className="mr-2 "
               />
             </Link>
-            <span className="text-white text-3xl font-bold whitespace-nowrap">
-              Picks<span className="text-[#00F474] p-0 m-0">Empire</span>
+            <span className="text-white mt-1 text-3xl font-bold whitespace-nowrap">
+              Picks<span className="text-[#00F474]">Empire</span>
             </span>
           </div>
 
