@@ -150,6 +150,7 @@ export interface User {
   avatar: string | null;
   registered: string;
   plan: string | null;
+  plan_status: string;
   status: string;
   amount: number | null;
   promo_code: string | null;
@@ -314,7 +315,12 @@ export const dashboardApi = {
     );
     return response.data;
   },
-
+  togglePlanStatus: async (id: number): Promise<ApiResponse<any>> => {
+    const response = await axiosClient.patch(
+      `/admin/subscriptions/plans/${id}/toggle-status`,
+    );
+    return response.data;
+  },
   deletePlan: async (id: number): Promise<ApiResponse<null>> => {
     const response = await axiosClient.delete<ApiResponse<null>>(
       `/admin/subscriptions/plans/${id}`,
@@ -407,7 +413,15 @@ export const dashboardApi = {
     );
     return response.data;
   },
-
+  updateUserStatus: async (
+    id: number,
+    status: string,
+  ): Promise<ApiResponse<null>> => {
+    const response = await axiosClient.patch(`/admin/users/${id}/status`, {
+      status,
+    });
+    return response.data;
+  },
   changePassword: async (data: {
     current_password: string;
     password: string;

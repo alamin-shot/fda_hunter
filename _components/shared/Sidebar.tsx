@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { X, Users } from "lucide-react";
 import Image from "next/image";
-import logo from "@/public/sideber/images/logo.png";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
@@ -13,7 +12,7 @@ import WalletIcon from "../icons/sidebar/WalletIcon";
 import UsersIcon from "../icons/sidebar/UsersIcon";
 import SettingsIcon from "../icons/sidebar/SettingsIcon";
 import LogoutIcon from "../icons/sidebar/LogoutIcon";
- 
+
 import { useAuth } from "@/context/AuthContext";
 import LogoutConfirmation from "../LogOutConfirmation";
 import PrivateRoute from "../PrivateRoute";
@@ -105,7 +104,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
     return flatSubPaths.some(
       (sub: any) =>
-        pathname.startsWith(`${sub.path}`) || pathname.includes(sub.path)
+        pathname.startsWith(`${sub.path}`) || pathname.includes(sub.path),
     );
   };
 
@@ -143,9 +142,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   };
 
   return (
-     
     <PrivateRoute>
-
       <aside
         className={`fixed top-0 left-0 z-40 h-screen transition-transform duration-300 ease-in-out
           ${isOpen ? "translate-x-0" : "-translate-x-full"}
@@ -156,9 +153,22 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="flex items-center justify-between py-5 px-6 border-b border-[#323B49]">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/dashboard" className="cursor-pointer" onClick={onClose}>
-              <h1 className="text-3xl font-bold text-white">LOGO</h1>
+            <Link
+              href="/dashboard"
+              className="cursor-pointer"
+              onClick={onClose}
+            >
+              <Image
+                src={"/logo.png"}
+                alt="Logo"
+                width={36}
+                height={36}
+                className="mr-2"
+              />
             </Link>
+            <span className="text-white text-3xl font-bold whitespace-nowrap">
+              Picks<span className="text-[#00F474] p-0 m-0">Empire</span>
+            </span>
           </div>
 
           {/* Close (mobile only) */}
@@ -275,6 +285,5 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         onConfirm={handleConfirmLogout}
       />
     </PrivateRoute>
-  
   );
 }

@@ -11,6 +11,7 @@ import DynamicTable from "../reusable/DynamicTable";
 import { UsersColumn } from "../columns/UsersColumn";
 import DynamicPagination from "../reusable/DynamicPagination";
 import { dashboardApi, User, UsersOverview } from "@/services/dashboardApi";
+import toast from "react-hot-toast";
 
 interface StatCardProps {
   title: string;
@@ -145,6 +146,19 @@ export default function UsersHome() {
     setItemsPerPage(newItemsPerPage);
     setCurrentPage(1); // Reset to first page
   };
+  const handleUserStatusChange = async (userId: number, newStatus: string) => {
+    try {
+      const response = await dashboardApi.updateUserStatus(userId, newStatus);
+      if (response.status) {
+        toast.success(
+          `User ${newStatus === "active" ? "activated" : "deactivated"}`,
+        );
+        fetchUsers();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to update status");
+    }
+  };
 
   // Prepare stat cards data with actual API data
   const statCardsData: StatCardProps[] = overview
@@ -261,7 +275,7 @@ export default function UsersHome() {
 
         <div className="mt-6">
           <DynamicTable
-            columns={UsersColumn}
+            columns={UsersColumn(handleUserStatusChange)}
             data={users}
             hasWrapperBorder={false}
             headerStyles={{

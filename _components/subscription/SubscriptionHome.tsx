@@ -371,7 +371,17 @@ export default function SubscriptionHome() {
       setLoading(false);
     }
   };
-
+  const handlePlanToggle = async (id: number) => {
+    try {
+      const response = await dashboardApi.togglePlanStatus(id);
+      if (response.status) {
+        toast.success(response.message || "Plan status updated");
+        fetchSubscriptionPackages();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to toggle plan");
+    }
+  };
   // Handle create promo code
   const handleCreatePromoCode = async () => {
     if (!promoCode.trim()) {
@@ -473,7 +483,20 @@ export default function SubscriptionHome() {
                 {plan.description}
               </p>
             </div>
+
             <div className="flex items-center gap-2">
+              <div className="flex items-center justify-end gap-2">
+                <Switch
+                  checked={plan.is_active}
+                  onCheckedChange={() => handlePlanToggle(plan.id)}
+                  className="cursor-pointer"
+                />
+                <span
+                  className={`text-xs ${plan.is_active ? "text-green-400" : "text-red-400"}`}
+                >
+                  {plan.is_active ? "Active" : "Inactive"}
+                </span>
+              </div>
               <button
                 className="cursor-pointer hover:bg-white/10 p-1 rounded"
                 onClick={() => handleOpenEdit(plan)}
@@ -497,11 +520,6 @@ export default function SubscriptionHome() {
                 </span>
               </h2>
               <div className="flex items-center gap-4 mt-2">
-                <span
-                  className={`text-xs px-2 py-1 rounded ${plan.is_active ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400"}`}
-                >
-                  {plan.is_active ? "Active" : "Inactive"}
-                </span>
                 <span className="text-xs text-[#A5A5AB]">USD</span>
               </div>
             </div>
