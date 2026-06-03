@@ -458,6 +458,7 @@ export const dashboardApi = {
 
   createCategory: async (data: {
     name: string;
+    icon?: string;
     is_active?: boolean;
   }): Promise<ApiResponse<Category>> => {
     const response = await axiosClient.post<ApiResponse<Category>>(

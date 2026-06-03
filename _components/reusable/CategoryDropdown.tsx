@@ -31,6 +31,7 @@ export default function CategoryDropdown({
   const [loading, setLoading] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryIcon, setNewCategoryIcon] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -132,10 +133,12 @@ export default function CategoryDropdown({
     try {
       const response = await dashboardApi.createCategory({
         name: newCategoryName.trim(),
+        icon: newCategoryIcon.trim() || undefined,
       });
       if (response.status) {
         toast.success("Category added");
         setNewCategoryName("");
+        setNewCategoryIcon("");
         setShowAdd(false);
         fetchCategories();
       }
@@ -211,7 +214,7 @@ export default function CategoryDropdown({
                 Add new category
               </button>
             ) : (
-              <div className="p-2 flex gap-2">
+              <div className="p-2 grid gap-2 sm:grid-cols-[1.4fr_1fr_auto]">
                 <input
                   ref={inputRef}
                   type="text"
@@ -221,8 +224,19 @@ export default function CategoryDropdown({
                     if (e.key === "Enter") handleAdd();
                     if (e.key === "Escape") setShowAdd(false);
                   }}
-                  className="flex-1 px-3 py-2 text-sm bg-[#1A1F2E] border border-[#323B49] rounded-lg text-white outline-none focus:border-[#00F474]"
+                  className="w-full px-3 py-2 text-sm bg-[#1A1F2E] border border-[#323B49] rounded-lg text-white outline-none focus:border-[#00F474]"
                   placeholder="Category name"
+                />
+                <input
+                  type="text"
+                  value={newCategoryIcon}
+                  onChange={(e) => setNewCategoryIcon(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAdd();
+                    if (e.key === "Escape") setShowAdd(false);
+                  }}
+                  className="w-full px-3 py-2 text-sm bg-[#1A1F2E] border border-[#323B49] rounded-lg text-white outline-none focus:border-[#00F474]"
+                  placeholder="Icon (app only)"
                 />
                 <button
                   onClick={handleAdd}
