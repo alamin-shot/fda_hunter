@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { dashboardApi } from "@/services/dashboardApi";
 import toast from "react-hot-toast";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Plus, Edit2 } from "lucide-react";
 import CategoryModal from "../predictions/CategoryModal";
 
 interface CategoryOption {
@@ -30,6 +30,14 @@ export default function CategoryDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<{
+    id: number;
+    name: string;
+    description: string | null;
+    icon: string | null;
+    image: string | null;
+  } | null>(null);
+  const [loadingCategory, setLoadingCategory] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -117,6 +125,31 @@ export default function CategoryDropdown({
     );
   };
 
+  const handleEdit = async (e: React.MouseEvent, cat: CategoryOption) => {
+    e.stopPropagation();
+    setLoadingCategory(true);
+
+    try {
+      // Fetch full category details
+      const response = await dashboardApi.getCategory(cat.id);
+      if (response.status) {
+        const fullCategory = response.data;
+        setEditingCategory({
+          id: fullCategory.id,
+          name: fullCategory.name,
+          description: fullCategory.description,
+          icon: fullCategory.icon,
+          image: fullCategory.image,
+        });
+        setIsModalOpen(true);
+      }
+    } catch (error) {
+      toast.error("Failed to load category details");
+    } finally {
+      setLoadingCategory(false);
+    }
+  };
+
   const selectedOption = categories.find((c) => c && c.value === value);
 
   return (
@@ -163,19 +196,30 @@ export default function CategoryDropdown({
                   }}
                 >
                   <span className="text-sm">{cat.label}</span>
-                  <button
-                    onClick={(e) => handleDelete(e, cat.id)}
-                    className="p-1 hover:bg-red-500/20 rounded transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => handleEdit(e, cat)}
+                      className="p-1 hover:bg-blue-500/20 rounded transition-colors"
+                    >
+                      <Edit2 className="w-3.5 h-3.5 text-blue-400" />
+                    </button>
+                    <button
+                      onClick={(e) => handleDelete(e, cat.id)}
+                      className="p-1 hover:bg-red-500/20 rounded transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
 
             <div className="border-t border-white/10">
               <button
-                onClick={() => setIsModalOpen(true)}
+                onClick={() => {
+                  setEditingCategory(null);
+                  setIsModalOpen(true);
+                }}
                 className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[#00F474] hover:bg-white/5 transition-colors"
               >
                 <Plus className="w-4 h-4" />
@@ -188,11 +232,16 @@ export default function CategoryDropdown({
 
       <CategoryModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingCategory(null);
+        }}
         onSuccess={() => {
           fetchCategories();
           setIsModalOpen(false);
+          setEditingCategory(null);
         }}
+        editingCategory={editingCategory}
       />
     </>
   );

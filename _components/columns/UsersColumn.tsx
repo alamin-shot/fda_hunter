@@ -7,12 +7,16 @@ interface UserRowData {
   email: string;
   avatar: string | null;
   registered: string;
-  plan: string | null;
   subscription_status: string;
   status: string;
-  // amount: number | null;
-  // promo_code: string | null;
   created_at: string;
+  subscription: {
+    status: string;
+    product_id: string;
+    store: string;
+    environment: string;
+    expires_at: string;
+  } | null;
 }
 
 export const UsersColumn = (
@@ -48,11 +52,12 @@ export const UsersColumn = (
   {
     label: "Plan",
     width: "10%",
-    accessor: "plan",
+    accessor: "subscription", // Changed from "product_id"
     sortable: true,
-    formatter: (v: string | null) => (
-      <span className="text-white text-sm">{v || "Free"}</span>
-    ),
+    formatter: (_value: any, row?: UserRowData) => {
+      const planName = row?.subscription?.product_id || "Free";
+      return <span className="text-white text-sm">{planName}</span>;
+    },
   },
   {
     label: "Plan Status",

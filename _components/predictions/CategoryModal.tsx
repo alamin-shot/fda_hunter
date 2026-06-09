@@ -8,12 +8,20 @@ interface CategoryModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  editingCategory?: {
+    id: number;
+    name: string;
+    description: string | null;
+    icon: string | null;
+    image: string | null;
+  } | null;
 }
 
 export default function CategoryModal({
   isOpen,
   onClose,
   onSuccess,
+  editingCategory,
 }: CategoryModalProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -25,19 +33,28 @@ export default function CategoryModal({
   const iconInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
+  const isEditing = !!editingCategory;
+
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen && editingCategory) {
+      // Populate form with existing data
+      setName(editingCategory.name);
+      setDescription(editingCategory.description || "");
+      if (editingCategory.icon) setIconPreview(editingCategory.icon);
+      if (editingCategory.image) setImagePreview(editingCategory.image);
+    } else if (!isOpen) {
       resetForm();
     }
-  }, [isOpen]);
+  }, [isOpen, editingCategory]);
 
   const resetForm = () => {
     setName("");
     setDescription("");
     setIconFile(null);
     setImageFile(null);
-    if (iconPreview) URL.revokeObjectURL(iconPreview);
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    if (iconPreview && !editingCategory?.icon) URL.revokeObjectURL(iconPreview);
+    if (imagePreview && !editingCategory?.image)
+      URL.revokeObjectURL(imagePreview);
     setIconPreview("");
     setImagePreview("");
   };
@@ -84,14 +101,34 @@ export default function CategoryModal({
 
     try {
       const { dashboardApi } = await import("@/services/dashboardApi");
-      const response = await dashboardApi.createCategory(formData);
+      let response;
+
+      if (isEditing && editingCategory) {
+        // Update existing category using POST with _method PUT
+        formData.append("_method", "PUT");
+        response = await dashboardApi.updateCategory(
+          editingCategory.id,
+          formData,
+        );
+      } else {
+        // Create new category
+        response = await dashboardApi.createCategory(formData);
+      }
+
       if (response.status) {
-        toast.success("Category added successfully");
+        toast.success(
+          isEditing
+            ? "Category updated successfully"
+            : "Category added successfully",
+        );
         onSuccess();
         onClose();
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to add category");
+      toast.error(
+        error.response?.data?.message ||
+          (isEditing ? "Failed to update category" : "Failed to add category"),
+      );
     } finally {
       setLoading(false);
     }
@@ -104,7 +141,9 @@ export default function CategoryModal({
       <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose} />
       <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-[#0e121b] border border-white/10 rounded-lg shadow-xl z-50">
         <div className="flex justify-between items-center p-4 border-b border-white/10">
-          <h2 className="text-white text-lg font-semibold">Add New Category</h2>
+          <h2 className="text-white text-lg font-semibold">
+            {isEditing ? "Edit Category" : "Add New Category"}
+          </h2>
           <button
             onClick={onClose}
             className="p-1 hover:bg-white/10 rounded transition-colors"
@@ -257,7 +296,13 @@ export default function CategoryModal({
             disabled={loading || !name.trim()}
             className="flex-1 px-4 py-2 bg-[#00F474] text-[#1D1F2C] font-semibold rounded-lg hover:bg-[#00F474]/90 disabled:opacity-50 transition-colors"
           >
-            {loading ? "Adding..." : "Add Category"}
+            {loading
+              ? isEditing
+                ? "Updating..."
+                : "Adding..."
+              : isEditing
+                ? "Update Category"
+                : "Add Category"}
           </button>
         </div>
       </div>

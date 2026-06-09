@@ -454,7 +454,12 @@ export const dashboardApi = {
       await axiosClient.get<ApiResponse<Category[]>>("/admin/categories");
     return response.data;
   },
-
+  getCategory: async (id: number): Promise<ApiResponse<Category>> => {
+    const response = await axiosClient.get<ApiResponse<Category>>(
+      `/admin/categories/${id}`,
+    );
+    return response.data;
+  },
   createCategory: async (data: FormData): Promise<ApiResponse<Category>> => {
     const response = await axiosClient.post<ApiResponse<Category>>(
       "/admin/categories",
