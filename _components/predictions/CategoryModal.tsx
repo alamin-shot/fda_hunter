@@ -104,8 +104,7 @@ export default function CategoryModal({
       let response;
 
       if (isEditing && editingCategory) {
-        // Update existing category using POST with _method PUT
-        formData.append("_method", "PUT");
+        formData.append("", "POST");
         response = await dashboardApi.updateCategory(
           editingCategory.id,
           formData,
