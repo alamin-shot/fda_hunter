@@ -23,8 +23,12 @@ export interface ApiResponse<T> {
 export interface Category {
   id: number;
   name: string;
+  icon: string | null;
+  image: string | null;
+  description: string | null;
   win_rate: string | null;
-  is_active: boolean;
+  active_predictions_count?: number;
+  is_active?: boolean;
 }
 
 export interface DashboardOverview {
@@ -195,12 +199,7 @@ export interface UsersParams {
   status?: string;
   used_promo?: string;
 }
-export interface Category {
-  id: number;
-  name: string;
-  win_rate: string | null;
-  is_active: boolean;
-}
+
 // ============ DASHBOARD API ============
 export const dashboardApi = {
   // ========== PREDICTIONS ==========
@@ -456,14 +455,23 @@ export const dashboardApi = {
     return response.data;
   },
 
-  createCategory: async (data: {
-    name: string;
-    icon?: string;
-    is_active?: boolean;
-  }): Promise<ApiResponse<Category>> => {
+  createCategory: async (data: FormData): Promise<ApiResponse<Category>> => {
     const response = await axiosClient.post<ApiResponse<Category>>(
       "/admin/categories",
       data,
+      { headers: { "Content-Type": "multipart/form-data" } },
+    );
+    return response.data;
+  },
+
+  updateCategory: async (
+    id: number,
+    data: FormData,
+  ): Promise<ApiResponse<Category>> => {
+    const response = await axiosClient.post<ApiResponse<Category>>(
+      `/admin/categories/${id}`,
+      data,
+      { headers: { "Content-Type": "multipart/form-data" } },
     );
     return response.data;
   },

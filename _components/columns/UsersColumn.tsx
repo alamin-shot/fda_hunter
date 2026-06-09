@@ -8,10 +8,10 @@ interface UserRowData {
   avatar: string | null;
   registered: string;
   plan: string | null;
-  plan_status: string;
+  subscription_status: string;
   status: string;
-  amount: number | null;
-  promo_code: string | null;
+  // amount: number | null;
+  // promo_code: string | null;
   created_at: string;
 }
 
@@ -57,15 +57,53 @@ export const UsersColumn = (
   {
     label: "Plan Status",
     width: "8%",
-    accessor: "plan_status",
+    accessor: "subscription_status",
     sortable: true,
-    formatter: (v: string) => (
-      <span
-        className={`px-2 py-1 rounded text-xs font-medium ${v === "active" ? "bg-green-900/30 text-green-400" : "bg-red-900/30 text-red-400"}`}
-      >
-        {v || "deactive"}
-      </span>
-    ),
+    formatter: (v: string) => {
+      const statusMap: Record<
+        string,
+        { bg: string; text: string; label: string }
+      > = {
+        active: {
+          bg: "bg-green-900/30",
+          text: "text-green-400",
+          label: "active",
+        },
+        deactive: {
+          bg: "bg-gray-800/50",
+          text: "text-gray-400",
+          label: "deactive",
+        },
+        none: { bg: "bg-gray-800/50", text: "text-gray-400", label: "none" },
+        running: {
+          bg: "bg-blue-900/30",
+          text: "text-blue-400",
+          label: "running",
+        },
+        billing_issue: {
+          bg: "bg-red-900/30",
+          text: "text-red-400",
+          label: "billing_issue",
+        },
+        expired: {
+          bg: "bg-yellow-900/30",
+          text: "text-yellow-400",
+          label: "expired",
+        },
+      };
+
+      const status = statusMap[v] || statusMap.deactive;
+      const displayLabel =
+        status.label === "billing_issue" ? "billing issue" : status.label;
+
+      return (
+        <span
+          className={`px-2 py-1 rounded text-xs font-medium ${status.bg} ${status.text}`}
+        >
+          {displayLabel}
+        </span>
+      );
+    },
   },
   {
     label: "Registered",
@@ -112,24 +150,24 @@ export const UsersColumn = (
       );
     },
   },
-  {
-    label: "Amount",
-    width: "8%",
-    accessor: "amount",
-    sortable: true,
-    formatter: (v: number | null) => (
-      <span className="text-white text-sm">{v != null ? `$${v}` : "-"}</span>
-    ),
-  },
-  {
-    label: "Promo Code",
-    width: "10%",
-    accessor: "promo_code",
-    sortable: true,
-    formatter: (v: string | null) => (
-      <span className={`text-sm ${v ? "text-white" : "text-gray-500"}`}>
-        {v || "No code"}
-      </span>
-    ),
-  },
+  // {
+  //   label: "Amount",
+  //   width: "8%",
+  //   accessor: "amount",
+  //   sortable: true,
+  //   formatter: (v: number | null) => (
+  //     <span className="text-white text-sm">{v != null ? `$${v}` : "-"}</span>
+  //   ),
+  // },
+  // {
+  //   label: "Promo Code",
+  //   width: "10%",
+  //   accessor: "promo_code",
+  //   sortable: true,
+  //   formatter: (v: string | null) => (
+  //     <span className={`text-sm ${v ? "text-white" : "text-gray-500"}`}>
+  //       {v || "No code"}
+  //     </span>
+  //   ),
+  // },
 ];

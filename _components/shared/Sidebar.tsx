@@ -20,11 +20,11 @@ import PrivateRoute from "../PrivateRoute";
 const menuItems = [
   { title: "Dashboard", icon: DashboardIcon, href: "/dashboard" },
   { title: "Predictions", icon: StaticsIcon, href: "/dashboard/predictions" },
-  {
-    title: "Subscriptions",
-    icon: WalletIcon,
-    href: "/dashboard/subscriptions",
-  },
+  // {
+  //   title: "Subscriptions",
+  //   icon: WalletIcon,
+  //   href: "/dashboard/subscriptions",
+  // },
   {
     title: "Users",
     icon: UsersIcon,
