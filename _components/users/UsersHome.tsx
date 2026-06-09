@@ -181,12 +181,12 @@ export default function UsersHome() {
           period: "today",
           icon: <PlusUsers />,
         },
-        {
-          title: "Promo code Users",
-          value: overview.promo_code_users,
-          period: "using promos",
-          icon: <Token />,
-        },
+        // {
+        //   title: "Promo code Users",
+        //   value: overview.promo_code_users,
+        //   period: "using promos",
+        //   icon: <Token />,
+        // },
       ]
     : [
         {
@@ -222,7 +222,7 @@ export default function UsersHome() {
           title="All Users"
           subtitle="Manage all your predictions across categories"
         />
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
           {statCardsData.map((card, index) => (
             <div
               className="p-3 relative border border-[#2B303B] rounded-xl overflow-hidden"
