@@ -97,10 +97,6 @@ const AddPredictionSidebar: React.FC<AddPredictionSidebarProps> = ({
       toast.error("Reason is required");
       return;
     }
-    if (!detailedSummary.trim()) {
-      toast.error("Detailed summary is required");
-      return;
-    }
 
     setLoading(true);
     setError(null);
@@ -115,7 +111,7 @@ const AddPredictionSidebar: React.FC<AddPredictionSidebarProps> = ({
         confidence_level: Number(confidenceLevel),
         signal: signal,
         reason: reason.trim(),
-        detailed_summary: detailedSummary.trim(),
+        detailed_summary: detailedSummary.trim() || "",
       });
 
       if (response.status) {

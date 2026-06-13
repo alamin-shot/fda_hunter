@@ -6,6 +6,15 @@ import {
   UpdatePredictionRequest,
 } from "@/services/dashboardApi";
 import CustomModal from "../reusable/CustomModal";
+import CategoryDropdown from "../reusable/CategoryDropdown";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 
 interface EditPredictionModalProps {
   isOpen: boolean;
@@ -27,6 +36,8 @@ const EditPredictionModal: React.FC<EditPredictionModalProps> = ({
   const [detailedSummary, setDetailedSummary] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
 
   useEffect(() => {
     if (prediction) {
@@ -35,6 +46,8 @@ const EditPredictionModal: React.FC<EditPredictionModalProps> = ({
       setConfidenceLevel(prediction.confidence_level?.toString() || "");
       setReason(prediction.reason || "");
       setDetailedSummary(prediction.detailed_summary || "");
+      setCategoryId(String(prediction.category?.id || ""));
+      setScheduledAt(prediction.scheduled_at || "");
       setError(null);
     } else {
       setTitle("");
@@ -42,6 +55,8 @@ const EditPredictionModal: React.FC<EditPredictionModalProps> = ({
       setConfidenceLevel("");
       setReason("");
       setDetailedSummary("");
+      setCategoryId("");
+      setScheduledAt("");
       setError(null);
     }
   }, [prediction]);
@@ -88,9 +103,11 @@ const EditPredictionModal: React.FC<EditPredictionModalProps> = ({
 
     try {
       const updateData: UpdatePredictionRequest = {
-        category_id: prediction.category.id,
+        category_id: Number(categoryId),
         title: title.trim(),
-        scheduled_at: prediction.scheduled_at,
+        scheduled_at: scheduledAt
+          ? format(new Date(scheduledAt), "yyyy-MM-dd HH:mm:ss")
+          : "",
         signal: signal.trim() || undefined,
         reason: reason.trim() || undefined,
         detailed_summary: detailedSummary.trim() || undefined,
@@ -160,7 +177,9 @@ const EditPredictionModal: React.FC<EditPredictionModalProps> = ({
       signal !== prediction?.signal ||
       confidenceLevel !== prediction?.confidence_level?.toString() ||
       reason !== prediction?.reason ||
-      detailedSummary !== prediction?.detailed_summary
+      detailedSummary !== prediction?.detailed_summary ||
+      categoryId !== String(prediction?.category?.id || "") ||
+      scheduledAt !== prediction?.scheduled_at
     ) {
       toast(
         (t) => (
@@ -236,15 +255,74 @@ const EditPredictionModal: React.FC<EditPredictionModalProps> = ({
         </div>
 
         <div className="mb-4">
-          <label className="block text-white text-sm font-medium mb-2">Category ID</label>
-          <input type="number" value={prediction?.category?.id || ""} disabled
-            className="w-full px-3 py-2 bg-[#1A1F2E] border border-[#323B49] rounded-lg text-gray-400 text-sm" />
+          <label className="block text-white text-sm font-medium mb-2">
+            Category
+          </label>
+          <CategoryDropdown
+            useId={true}
+            value={categoryId}
+            onChange={setCategoryId}
+            placeholder="Select category"
+            className="w-full"
+          />
         </div>
 
         <div className="mb-4">
-          <label className="block text-white text-sm font-medium mb-2">Scheduled At</label>
-          <input type="datetime-local" value={prediction?.scheduled_at?.slice(0, 16) || ""} disabled
-            className="w-full px-3 py-2 bg-[#1A1F2E] border border-[#323B49] rounded-lg text-gray-400 text-sm" />
+          <label className="block text-white text-sm font-medium mb-2">
+            Scheduled At *
+          </label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                className="w-full px-3 py-2 bg-[#1A1F2E] border border-[#323B49] rounded-lg text-white text-sm text-left flex items-center gap-2 hover:border-[#00f474] transition-colors"
+                disabled={loading}
+              >
+                <CalendarIcon className="w-4 h-4 text-gray-400" />
+                {scheduledAt ? (
+                  <span>{format(new Date(scheduledAt), "PPP p")}</span>
+                ) : (
+                  <span className="text-gray-500">Pick a date & time</span>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 bg-[#1A1F2E] border-[#323B49] z-[9999]">
+              <div className="p-3 border-b border-[#323B49]">
+                <input
+                  type="time"
+                  value={
+                    scheduledAt ? format(new Date(scheduledAt), "HH:mm") : ""
+                  }
+                  onChange={(e) => {
+                    const date = scheduledAt
+                      ? new Date(scheduledAt)
+                      : new Date();
+                    const [hours, minutes] = e.target.value.split(":");
+                    date.setHours(Number(hours), Number(minutes));
+                    setScheduledAt(date.toISOString());
+                  }}
+                  className="w-full bg-transparent text-white text-center outline-none [color-scheme:dark]"
+                  style={{ colorScheme: "dark" }}
+                />
+              </div>
+              <Calendar
+                mode="single"
+                selected={scheduledAt ? new Date(scheduledAt) : undefined}
+                onSelect={(date) => {
+                  if (date) {
+                    const current = scheduledAt
+                      ? new Date(scheduledAt)
+                      : new Date();
+                    date.setHours(current.getHours(), current.getMinutes());
+                    setScheduledAt(date.toISOString().slice(0, 16));
+                  }
+                }}
+                disabled={(date) =>
+                  date < new Date(new Date().setHours(0, 0, 0, 0))
+                }
+                className="bg-[#1A1F2E] text-white"
+              />
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div className="mb-4">
